@@ -1,80 +1,184 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buy Airtime | Orikaeze Data Hub</title><style>
+<title>Buy Airtime | ORIKAEZE DATA HUB</title>
+
+<style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;color:#172b23;background:#f5f9f6;line-height:1.6}
+body{font-family:Arial,sans-serif;background:#f5f9f6;color:#172b23;line-height:1.6}
 a{text-decoration:none;color:inherit}
-header{background:white;padding:18px 6%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5ece6;gap:15px}
+header{background:white;padding:18px 6%;display:flex;justify-content:space-between;align-items:center;gap:15px;border-bottom:1px solid #e5ece6}
 .brand strong{display:block;font-size:14px}
 .brand small{color:#718078;font-size:11px}
 nav{display:flex;gap:22px;font-size:13px;font-weight:bold}
 nav a:hover{color:#078052}
 .home{background:#07583e;color:white;padding:10px 17px;border-radius:7px;font-size:12px}
-main{max-width:650px;margin:65px auto;padding:0 20px}
+main{max-width:650px;margin:55px auto;padding:0 20px}
 .tag{color:#078052;font-size:11px;font-weight:bold;letter-spacing:2px}
-h1{font-size:38px;margin:12px 0}
+h1{font-size:35px;margin:12px 0}
 .intro{color:#718078;font-size:14px;margin-bottom:25px}
 .form-card{background:white;padding:28px;border-radius:14px;border:1px solid #e5ece6;box-shadow:0 12px 35px #123c200b}
 label{display:block;font-size:13px;font-weight:bold;margin:18px 0 8px}
+input,select{width:100%;height:49px;border:1px solid #dce6df;border-radius:7px;padding:0 13px;font-size:14px;background:white}
 .networks{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .networks button{background:white;border:1px solid #dce6df;border-radius:8px;padding:12px 4px;font-weight:bold;color:#172b23;cursor:pointer}
 .networks button.selected{background:#eaf6ef;border:2px solid #078052;color:#07583e}
-input{width:100%;height:49px;border:1px solid #dce6df;border-radius:7px;padding:0 13px;font-size:14px;background:white}
-.continue{width:100%;background:#078052;color:white;border:0;border-radius:7px;padding:15px;font-weight:bold;margin-top:25px;font-size:14px;cursor:pointer}
+button.continue{width:100%;background:#078052;color:white;border:0;border-radius:7px;padding:15px;font-weight:bold;margin-top:25px;font-size:14px;cursor:pointer}
+button:disabled{opacity:.6;cursor:not-allowed}
+#message{font-size:13px;margin-top:15px;overflow-wrap:anywhere}
 .note{font-size:11px;color:#8a7147;margin-top:15px;display:block}
 footer{text-align:center;padding:30px 15px;color:#718078;font-size:12px;background:white;margin-top:70px}
-@media(max-width:600px){header{flex-wrap:wrap;padding:15px 5%}nav{order:3;width:100%;justify-content:space-between;gap:8px;font-size:11px}main{margin:45px auto}h1{font-size:32px}}
-</style></head><body><header>
+@media(max-width:600px){
+header{flex-wrap:wrap;padding:15px 5%}
+nav{order:3;width:100%;justify-content:space-between;gap:8px;font-size:11px}
+main{margin:40px auto}
+h1{font-size:30px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
 <a class="brand" href="index.html">
 <strong>ORIKAEZE DATA HUB</strong>
 <small>Powered by Orikaeze Media</small>
-</a><nav>
+</a>
+
+<nav>
 <a href="index.html">Home</a>
 <a href="data.html">Buy Data</a>
 <a href="airtime.html">Buy Airtime</a>
 <a href="about.html">About</a>
-</nav><a class="home" href="index.html">Home</a>
+</nav>
 
-</header><main>
+<a class="home" href="index.html">Home</a>
+</header>
+
+<main>
 <span class="tag">AIRTIME SERVICES</span>
-<h1>Buy airtime</h1>
-<p class="intro">Choose your network, enter the phone number and specify how much airtime you want.</p><div class="form-card"><label>Select network</label>
+<h1>Buy Airtime</h1>
+<p class="intro">Recharge any Nigerian mobile network quickly and conveniently.</p>
+
+<div class="form-card">
+
+<label>Select network</label>
 
 <div class="networks">
-<button type="button" class="selected" aria-pressed="true">MTN</button>
-<button type="button" aria-pressed="false">Airtel</button>
-<button type="button" aria-pressed="false">Glo</button>
-<button type="button" aria-pressed="false">T2*</button>
-</div><label for="phone">Phone number</label>
+<button type="button" class="selected" data-network="MTN">MTN</button>
+<button type="button" data-network="AIRTEL">Airtel</button>
+<button type="button" data-network="GLO">Glo</button>
+<button type="button" data-network="9MOBILE">T2</button>
+</div>
+
+<label for="email">Email address</label>
+<input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+
+<label for="phone">Recipient phone number</label>
 <input id="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="08012345678">
 
-<label for="amount">Amount (₦)</label>
-<input id="amount" type="number" min="50" placeholder="Enter amount">
+<label for="amount">Airtime amount (₦)</label>
+<input id="amount" type="number" min="100" max="100000" step="1" placeholder="Enter amount">
 
-<button class="continue" type="button" onclick="alert('This website is still a preview. Payment and automatic airtime delivery are not connected yet.')">Continue</button>
+<button class="continue" id="continueBtn" type="button">
+Continue to payment
+</button>
 
-<small class="note">*T2 availability depends on provider support. No real orders or payments can be made yet.</small>
+<p id="message" role="status"></p>
+
+<small class="note">
+Please confirm the phone number and network before payment.
+</small>
 
 </div>
-</main><footer>
+</main>
+
+<footer>
 <strong>ORIKAEZE DATA HUB</strong>
 <p>Fast, Affordable and Reliable Digital Services.</p>
 <p>Powered by Orikaeze Media · IT CAN ONLY GET BETTER!</p>
-</footer><script>
-const networkButtons = document.querySelectorAll(".networks button");
+</footer>
 
-networkButtons.forEach(button => {
-button.addEventListener("click", function() {
-networkButtons.forEach(item => {
-item.classList.remove("selected");
-item.setAttribute("aria-pressed", "false");
+<script>
+const API = "https://orikaeze-data-hub.eruakennethnnabuike.workers.dev";
+
+const buttons = document.querySelectorAll(".networks button");
+const emailInput = document.getElementById("email");
+const phoneInput = document.getElementById("phone");
+const amountInput = document.getElementById("amount");
+const continueBtn = document.getElementById("continueBtn");
+const message = document.getElementById("message");
+
+let selectedNetwork = "MTN";
+
+buttons.forEach(button => {
+  button.addEventListener("click", () => {
+    buttons.forEach(item => item.classList.remove("selected"));
+    button.classList.add("selected");
+    selectedNetwork = button.dataset.network;
+  });
 });
 
-this.classList.add("selected");
-this.setAttribute("aria-pressed", "true");
+continueBtn.addEventListener("click", async () => {
+  message.textContent = "";
+
+  const email = emailInput.value.trim();
+  const phone = phoneInput.value.trim();
+  const amount = Number(amountInput.value);
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    message.textContent = "Please enter a valid email address.";
+    return;
+  }
+
+  if (!/^0[0-9]{10}$/.test(phone)) {
+    message.textContent = "Please enter a valid 11-digit phone number.";
+    return;
+  }
+
+  if (!Number.isInteger(amount) || amount < 100 || amount > 100000) {
+    message.textContent = "Enter an airtime amount between ₦100 and ₦100,000.";
+    return;
+  }
+
+  continueBtn.disabled = true;
+  message.textContent = "Preparing your payment...";
+
+  try {
+    const response = await fetch(API + "/api/initialize-payment", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        email,
+        phone,
+        service: "airtime",
+        network: selectedNetwork,
+        amount
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Payment could not be started.");
+    }
+
+    if (!result.authorization_url) {
+      throw new Error("Payment link was not returned.");
+    }
+
+    window.location.href = result.authorization_url;
+
+  } catch (error) {
+    message.textContent = error.message || "Unable to connect. Please try again.";
+    continueBtn.disabled = false;
+  }
 });
-});
-</script></body>
-                                                                                                               </html>
+</script>
+
+</body>
+</html>
