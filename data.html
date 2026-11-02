@@ -1,80 +1,85 @@
-<!DOCTYPE html><html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buy Data | Orikaeze Data Hub</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;color:#172b23;background:#f5f9f6;line-height:1.6}
-a{text-decoration:none;color:inherit}
-header{background:white;padding:18px 6%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5ece6;gap:15px}
-.brand strong{display:block;font-size:14px}
-.brand small{color:#718078;font-size:11px}
-nav{display:flex;gap:22px;font-size:13px;font-weight:bold}
-nav a:hover{color:#078052}
-.home{background:#07583e;color:white;padding:10px 17px;border-radius:7px;font-size:12px}
-main{max-width:650px;margin:65px auto;padding:0 20px}
-.tag{color:#078052;font-size:11px;font-weight:bold;letter-spacing:2px}
-h1{font-size:38px;margin:12px 0}
-.intro{color:#718078;font-size:14px;margin-bottom:25px}
-.form-card{background:white;padding:28px;border-radius:14px;border:1px solid #e5ece6;box-shadow:0 12px 35px #123c200b}
-label{display:block;font-size:13px;font-weight:bold;margin:18px 0 8px}
-label:first-child{margin-top:0}
-input,select{width:100%;height:49px;border:1px solid #dce6df;border-radius:7px;padding:0 13px;font-size:14px;background:white}
-.networks{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-.networks button{background:white;border:1px solid #dce6df;border-radius:8px;padding:12px 4px;font-weight:bold;color:#172b23}
-.networks button.selected{background:#eaf6ef;border:2px solid #078052;color:#07583e}
-button.continue{width:100%;background:#078052;color:white;border:0;border-radius:7px;padding:15px;font-weight:bold;margin-top:25px;font-size:14px}
-.note{font-size:11px;color:#8a7147;margin-top:15px;display:block}
-footer{text-align:center;padding:30px 15px;color:#718078;font-size:12px;background:white;margin-top:70px}
-@media(max-width:600px){header{flex-wrap:wrap;padding:15px 5%}nav{order:3;width:100%;justify-content:space-between;gap:8px;font-size:11px}main{margin:45px auto}h1{font-size:32px}}
-</style>
-</head>
-<body>
-<header>
-<a class="brand" href="index.html">
-<strong>ORIKAEZE DATA HUB</strong>
-<small>Powered by Orikaeze Media</small>
-</a>
-<nav>
-<a href="index.html">Home</a>
-<a href="data.html">Buy Data</a>
-<a href="airtime.html">Buy Airtime</a>
-<a href="about.html">About</a>
-</nav>
-<a class="home" href="index.html">Home</a>
-</header><main>
-<span class="tag">DATA SERVICES</span>
-<h1>Buy mobile data</h1>
-<p class="intro">Choose your network, enter your phone number and select your preferred data bundle.</p><div class="form-card">
-<label>Select network</label>
-<div class="networks">
-<button type="button" class="selected">MTN</button>
-<button type="button">Airtel</button>
-<button type="button">Glo</button>
-<button type="button">T2*</button>
-</div><label for="phone">Phone number</label>
-<input id="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="08012345678">
-
-<label for="plan">Select data bundle</label>
+<!DOCTYPE html><html lang="en">  <head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Buy Data | Orikaeze Data Hub</title>  
+<style>  
+*{box-sizing:border-box;margin:0;padding:0}  
+body{font-family:Arial,sans-serif;color:#172b23;background:#f5f9f6;line-height:1.6}  
+a{text-decoration:none;color:inherit}  
+header{background:white;padding:18px 6%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5ece6;gap:15px}  
+.brand strong{display:block;font-size:14px}  
+.brand small{color:#718078;font-size:11px}  
+nav{display:flex;gap:22px;font-size:13px;font-weight:bold}  
+nav a:hover{color:#078052}  
+.home{background:#07583e;color:white;padding:10px 17px;border-radius:7px;font-size:12px}  
+main{max-width:650px;margin:65px auto;padding:0 20px}  
+.tag{color:#078052;font-size:11px;font-weight:bold;letter-spacing:2px}  
+h1{font-size:38px;margin:12px 0}  
+.intro{color:#718078;font-size:14px;margin-bottom:25px}  
+.form-card{background:white;padding:28px;border-radius:14px;border:1px solid #e5ece6;box-shadow:0 12px 35px #123c200b}  
+label{display:block;font-size:13px;font-weight:bold;margin:18px 0 8px}  
+label:first-child{margin-top:0}  
+input,select{width:100%;height:49px;border:1px solid #dce6df;border-radius:7px;padding:0 13px;font-size:14px;background:white}  
+.networks{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}  
+.networks button{background:white;border:1px solid #dce6df;border-radius:8px;padding:12px 4px;font-weight:bold;color:#172b23;cursor:pointer}  
+.networks button.selected{background:#eaf6ef;border:2px solid #078052;color:#07583e}  
+button.continue{width:100%;background:#078052;color:white;border:0;border-radius:7px;padding:15px;font-weight:bold;margin-top:25px;font-size:14px;cursor:pointer}  
+.note{font-size:11px;color:#8a7147;margin-top:15px;display:block}  
+footer{text-align:center;padding:30px 15px;color:#718078;font-size:12px;background:white;margin-top:70px}  
+@media(max-width:600px){header{flex-wrap:wrap;padding:15px 5%}nav{order:3;width:100%;justify-content:space-between;gap:8px;font-size:11px}main{margin:45px auto}h1{font-size:32px}}  
+</style>  
+</head>  
+<body><header>  
+<a class="brand" href="index.html">  
+<strong>ORIKAEZE DATA HUB</strong>  
+<small>Powered by Orikaeze Media</small>  
+</a>  
+<nav>  
+<a href="index.html">Home</a>  
+<a href="data.html">Buy Data</a>  
+<a href="airtime.html">Buy Airtime</a>  
+<a href="about.html">About</a>  
+</nav>  
+<a class="home" href="index.html">Home</a>  
+</header><main>  
+<span class="tag">DATA SERVICES</span>  
+<h1>Buy mobile data</h1>  
+<p class="intro">Choose your network, enter your phone number and select your preferred data bundle.</p><div class="form-card">  
+<label>Select network</label><div class="networks">  
+<button type="button" class="selected" aria-pressed="true">MTN</button>  
+<button type="button" aria-pressed="false">Airtel</button>  
+<button type="button" aria-pressed="false">Glo</button>  
+<button type="button" aria-pressed="false">T2*</button>  
+</div><label for="phone">Phone number</label>  
+<input id="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="08012345678">  <label for="plan">Select data bundle</label>
 <select id="plan">
 
-<option value="">Choose a data bundle</option>
-<option>500MB</option>
-<option>1GB</option>
-<option>2GB</option>
-<option>3GB</option>
-<option>5GB</option>
-<option>10GB</option>
-</select><button class="continue" type="button" onclick="alert('This website is still a preview. Payment and automatic data delivery are not connected yet.')">Continue</button>
+<option value="">Choose a data bundle</option>  
+<option>500MB</option>  
+<option>1GB</option>  
+<option>2GB</option>  
+<option>3GB</option>  
+<option>5GB</option>  
+<option>10GB</option>  
+</select><button class="continue" type="button" onclick="alert('This website is still a preview. Payment and automatic data delivery are not connected yet.')">Continue</button>  <small class="note">*T2 availability depends on provider support. No real orders or payments can be made yet.</small>
 
-<small class="note">*T2 availability depends on provider support. No real orders or payments can be made yet.</small>
+</div>  
+</main><footer>  
+<strong>ORIKAEZE DATA HUB</strong>  
+<p>Fast, Affordable and Reliable Digital Services.</p>  
+<p>Powered by Orikaeze Media · IT CAN ONLY GET BETTER!</p>  
+</footer><script>  
+const networkButtons = document.querySelectorAll(".networks button");  networkButtons.forEach(button => {
+button.addEventListener("click", function() {
+networkButtons.forEach(item => {
+item.classList.remove("selected");
+item.setAttribute("aria-pressed", "false");
+});
 
-</div>
-</main><footer>
-<strong>ORIKAEZE DATA HUB</strong>
-<p>Fast, Affordable and Reliable Digital Services.</p>
-<p>Powered by Orikaeze Media · IT CAN ONLY GET BETTER!</p>
-</footer>
-</body>
+this.classList.add("selected");
+this.setAttribute("aria-pressed", "true");
+});
+});
+</script></body>
+
 </html>
