@@ -1,23 +1,82 @@
+const MELE_BASE = "https://meledata.ng/api/v1/developer";
+const PAYSTACK_BASE = "https://api.paystack.co";
+
+const json = (data, status = 200, origin = "*") =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Vary": "Origin"
+    }
+  });
+
+const clean = value => String(value || "").trim();
+
+const validPhone = value => /^0[789][01]\d{8}$/.test(value);
+
+const money = value => Math.round(Number(value) * 100);
+
+async function mele(env, path, options = {}) {
+  return fetch(MELE_BASE + path, {
+    method: options.method || "GET",
+    headers: {
+      "X-API-Key": env.MELE_SECRET_KEY,
+      "Content-Type": "application/json"
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+}
+
+async function paystack(env, path) {
+  return fetch(PAYSTACK_BASE + path, {
+    headers: {
+      Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`
+    }
+  });
+}
+
+async function getLiveStatus(env) {
+  const response = await mele(env, "/wallet/");
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error("MELE wallet could not be verified.");
+  }
+
+  if (result.data?.livemode !== true) {
+    throw new Error("MELE live API access is not active.");
+  }
+
+  return result.data;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
-    const allowedOrigin = env.ALLOWED_ORIGIN || "https://orikaezedatahub.github.io";
+    const allowedOrigin =
+      env.ALLOWED_ORIGIN || "https://orikaezedatahub.github.io";
 
-    const headers = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": origin === allowedOrigin ? origin : allowedOrigin,
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Vary": "Origin"
-    };
-
-    const reply = (data, status = 200) =>
-      new Response(JSON.stringify(data), { status, headers });
+    if (origin && origin !== allowedOrigin) {
+      return json({ success: false, message: "Origin not allowed." }, 403);
+    }
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers });
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type"
+        }
+      });
     }
+
+    const reply = (data, status = 200) =>
+      json(data, status, allowedOrigin);
 
     if (url.pathname === "/" || url.pathname === "/api/health") {
       return reply({
@@ -27,77 +86,48 @@ export default {
       });
     }
 
-    if (!env.PAYSTACK_SECRET_KEY) {
-      return reply({ success: false, message: "Payment service is not configured." }, 503);
+    if (!env.DB || !env.PAYSTACK_SECRET_KEY || !env.MELE_SECRET_KEY) {
+      return reply({
+        success: false,
+        message: "Backend configuration is incomplete."
+      }, 503);
     }
 
-    if (url.pathname === "/api/initialize-payment" && request.method === "POST") {
-      let body;
-
+    if (url.pathname === "/api/plans" && request.method === "GET") {
       try {
-        body = await request.json();
-      } catch {
-        return reply({ success: false, message: "Invalid request." }, 400);
-      }
-
-      const email = String(body.email || "").trim();
-      const productId = String(body.productId || "").trim();
-      const phone = String(body.phone || "").trim();
-
-      if (!email || !productId || !phone) {
-        return reply({ success: false, message: "Email, product and phone are required." }, 400);
-      }
-
-      let products;
-
-      try {
-        products = JSON.parse(env.PRODUCTS_JSON || "{}");
-      } catch {
-        return reply({ success: false, message: "Product price list is invalid." }, 500);
-      }
-
-      const product = products[productId];
-
-      if (!product || !Number.isInteger(product.amount) || product.amount < 100) {
-        return reply({ success: false, message: "This product is not available yet." }, 400);
-      }
-
-      try {
-        const response = await fetch("https://api.paystack.co/transaction/initialize", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            email,
-            amount: product.amount,
-            currency: "NGN",
-            metadata: {
-              product_id: productId,
-              phone,
-              service: "ORIKAEZE DATA HUB"
-            }
-          })
-        });
-
+        const response = await mele(env, "/data/plans");
         const result = await response.json();
 
-        if (!response.ok || !result.status) {
-          return reply({ success: false, message: "Could not start payment." }, 502);
+        if (!response.ok) {
+          return reply({
+            success: false,
+            message: "Could not retrieve data plans."
+          }, 502);
         }
 
         return reply({
           success: true,
-          authorization_url: result.data.authorization_url,
-          reference: result.data.reference
+          plans: result.plans || result.data?.plans || []
         });
       } catch {
-        return reply({ success: false, message: "Payment service unavailable." }, 502);
+        return reply({
+          success: false,
+          message: "Data plans are temporarily unavailable."
+        }, 502);
       }
     }
 
-    if (url.pathname === "/api/verify-payment" && request.method === "POST") {
+    if (url.pathname === "/api/initialize-payment" &&
+        request.method === "POST") {
+      try {
+        await getLiveStatus(env);
+      } catch {
+        return reply({
+          success: false,
+          message: "Live service delivery is not yet available."
+        }, 503);
+      }
+
       let body;
 
       try {
@@ -106,40 +136,310 @@ export default {
         return reply({ success: false, message: "Invalid request." }, 400);
       }
 
-      const reference = String(body.reference || "").trim();
+      const email = clean(body.email).toLowerCase();
+      const phone = clean(body.phone);
+      const service = clean(body.service).toLowerCase();
+      const network = clean(body.network).toUpperCase();
+      const productId = clean(body.productId);
+      const faceValue = Number(body.amount);
 
-      if (!reference) {
-        return reply({ success: false, message: "Payment reference is required." }, 400);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+          !validPhone(phone) ||
+          !["data", "airtime"].includes(service) ||
+          !["MTN", "GLO", "AIRTEL", "9MOBILE"].includes(network)) {
+        return reply({
+          success: false,
+          message: "Please check your email, phone and service details."
+        }, 400);
       }
 
+      let providerCost;
+      let planId = null;
+
+      if (service === "data") {
+        const plansResponse = await mele(env, "/data/plans");
+        const plansResult = await plansResponse.json();
+        const plans = plansResult.plans || plansResult.data?.plans || [];
+
+        const plan = plans.find(p =>
+          String(p.plan_id) === productId &&
+          String(p.network).toUpperCase() === network
+        );
+
+        if (!plansResponse.ok || !plan) {
+          return reply({
+            success: false,
+            message: "Selected data plan is unavailable."
+          }, 400);
+        }
+
+        providerCost = Number(plan.price);
+        planId = plan.plan_id;
+      } else {
+        if (!Number.isFinite(faceValue) || faceValue < 100 ||
+            faceValue > 100000) {
+          return reply({
+            success: false,
+            message: "Airtime amount must be at least ₦100."
+          }, 400);
+        }
+
+        providerCost = faceValue;
+      }
+
+      const markup = Math.max(0, Number(env.PROFIT_NAIRA || 0));
+      const customerAmount = Math.ceil(providerCost + markup);
+
+      if (!Number.isFinite(customerAmount) || customerAmount < 100) {
+        return reply({
+          success: false,
+          message: "Invalid product price."
+        }, 400);
+      }
+
+      const reference = "ODH_" + crypto.randomUUID().replace(/-/g, "");
+
       try {
+        await env.DB.prepare(`
+          INSERT INTO orders
+          (reference, email, phone, service, network, product_id,
+           amount, payment_status, delivery_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
+        `).bind(
+          reference,
+          email,
+          phone,
+          service,
+          network,
+          planId === null ? String(faceValue) : String(planId),
+          money(customerAmount)
+        ).run();
+
         const response = await fetch(
-          "https://api.paystack.co/transaction/verify/" + encodeURIComponent(reference),
+          PAYSTACK_BASE + "/transaction/initialize",
           {
+            method: "POST",
             headers: {
-              Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`
-            }
+              Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              email,
+              amount: money(customerAmount),
+              currency: "NGN",
+              reference,
+              callback_url: env.PAYSTACK_CALLBACK_URL,
+              metadata: {
+                service,
+                network,
+                phone,
+                product_id: planId,
+                order_reference: reference
+              }
+            })
           }
         );
 
         const result = await response.json();
 
-        if (!response.ok || !result.status || result.data?.status !== "success") {
-          return reply({ success: false, message: "Payment verification failed." }, 400);
+        if (!response.ok || !result.status) {
+          await env.DB.prepare(`
+            UPDATE orders SET payment_status = 'initialization_failed',
+            updated_at = CURRENT_TIMESTAMP WHERE reference = ?
+          `).bind(reference).run();
+
+          return reply({
+            success: false,
+            message: "Could not initialize payment."
+          }, 502);
         }
 
         return reply({
           success: true,
-          reference: result.data.reference,
-          amount: result.data.amount,
-          currency: result.data.currency,
-          message: "Payment verified. Service delivery integration is pending."
+          reference,
+          authorization_url: result.data.authorization_url
         });
       } catch {
-        return reply({ success: false, message: "Payment verification unavailable." }, 502);
+        return reply({
+          success: false,
+          message: "Payment initialization failed."
+        }, 502);
       }
     }
 
-    return reply({ success: false, message: "Route not found." }, 404);
+    if (url.pathname === "/api/verify-payment" &&
+        request.method === "POST") {
+      let body;
+
+      try {
+        body = await request.json();
+      } catch {
+        return reply({ success: false, message: "Invalid request." }, 400);
+      }
+
+      const reference = clean(body.reference);
+
+      if (!reference || reference.length > 100) {
+        return reply({
+          success: false,
+          message: "Invalid payment reference."
+        }, 400);
+      }
+
+      try {
+        const order = await env.DB.prepare(`
+          SELECT * FROM orders WHERE reference = ?
+        `).bind(reference).first();
+
+        if (!order) {
+          return reply({
+            success: false,
+            message: "Order not found."
+          }, 404);
+        }
+
+        if (order.delivery_status === "delivered") {
+          return reply({
+            success: true,
+            message: "Service already delivered.",
+            reference
+          });
+        }
+
+        const verification = await paystack(
+          env,
+          "/transaction/verify/" + encodeURIComponent(reference)
+        );
+
+        const payment = await verification.json();
+
+        if (!verification.ok || !payment.status ||
+            payment.data?.status !== "success" ||
+            payment.data?.currency !== "NGN" ||
+            payment.data?.amount !== order.amount ||
+            payment.data?.reference !== reference) {
+          return reply({
+            success: false,
+            message: "Payment could not be verified."
+          }, 400);
+        }
+
+        await getLiveStatus(env);
+
+        const lock = await env.DB.prepare(`
+          UPDATE orders
+          SET payment_status = 'success',
+              delivery_status = 'processing',
+              updated_at = CURRENT_TIMESTAMP
+          WHERE reference = ?
+            AND payment_status = 'pending'
+            AND delivery_status = 'pending'
+        `).bind(reference).run();
+
+        if (!lock.meta.changes) {
+          const latest = await env.DB.prepare(`
+            SELECT delivery_status FROM orders WHERE reference = ?
+          `).bind(reference).first();
+
+          return reply({
+            success: latest?.delivery_status === "delivered",
+            message: "Order is already being processed.",
+            reference
+          });
+        }
+
+        const providerReference = "ODH_" + reference;
+
+        let purchaseResponse;
+
+        if (order.service === "data") {
+          purchaseResponse = await mele(env, "/data/purchase", {
+            method: "POST",
+            body: {
+              network: order.network,
+              phone_number: order.phone,
+              plan_id: Number(order.product_id),
+              reference: providerReference
+            }
+          });
+        } else {
+          purchaseResponse = await mele(env, "/airtime/purchase", {
+            method: "POST",
+            body: {
+              network: order.network,
+              phone_number: order.phone,
+              amount: Number(order.product_id),
+              reference: providerReference
+            }
+          });
+        }
+
+        let delivery;
+
+        try {
+          delivery = await purchaseResponse.json();
+        } catch {
+          delivery = {};
+        }
+
+        const delivered =
+          purchaseResponse.ok &&
+          (delivery.status === true ||
+           delivery.data?.status === "success");
+
+        await env.DB.prepare(`
+          UPDATE orders
+          SET provider_reference = ?,
+              delivery_status = ?,
+              provider_response = ?,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE reference = ?
+        `).bind(
+          providerReference,
+          delivered ? "delivered" : "pending_review",
+          JSON.stringify(delivery).slice(0, 5000),
+          reference
+        ).run();
+
+        return reply({
+          success: delivered,
+          reference,
+          message: delivered
+            ? "Payment successful. Your service has been delivered."
+            : "Payment received. Your order is being checked."
+        });
+      } catch {
+        return reply({
+          success: false,
+          message: "Transaction is being checked. Please do not pay again."
+        }, 502);
+      }
+    }
+
+    if (url.pathname === "/api/order-status" &&
+        request.method === "GET") {
+      const reference = clean(url.searchParams.get("reference"));
+
+      if (!reference) {
+        return reply({ success: false, message: "Reference required." }, 400);
+      }
+
+      const order = await env.DB.prepare(`
+        SELECT reference, service, network, payment_status,
+               delivery_status, created_at
+        FROM orders WHERE reference = ?
+      `).bind(reference).first();
+
+      if (!order) {
+        return reply({ success: false, message: "Order not found." }, 404);
+      }
+
+      return reply({ success: true, order });
+    }
+
+    return reply({
+      success: false,
+      message: "Route not found."
+    }, 404);
   }
 };
