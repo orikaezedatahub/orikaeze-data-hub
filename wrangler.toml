@@ -5,3 +5,8 @@ workers_dev = true
 
 [vars]
 ALLOWED_ORIGIN = "https://orikaezedatahub.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "orikaeze-data-hub-db"
+database_id = "8d82fb99-838a-482c-ba00-ed791fde1e8a"
