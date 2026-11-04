@@ -3,17 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payment status | Orikaeze Hub</title>
+<title>Payment Status | ORIKAEZE HUB</title>
+<meta name="theme-color" content="#07583e">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:24px;background:#f3f8f4;color:#173126;font-family:Arial,sans-serif;min-height:100vh;display:grid;place-items:center}
-.card{width:100%;max-width:480px;background:#fff;padding:30px 24px;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 12px 35px #123c2010;text-align:center}
+body{margin:0;padding:24px;background:radial-gradient(circle at 50% 0,#e0f0e5 0,transparent 38%),#f3f8f4;color:#173126;font-family:Arial,sans-serif;min-height:100vh;display:grid;place-items:center}
+.card{width:100%;max-width:480px;background:#fff;padding:30px 24px;border:1px solid #e1ebe3;border-radius:20px;box-shadow:0 20px 55px rgba(18,60,32,.09);text-align:center}
 .mark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;background:#eaf6ef;color:#087c50;font-size:26px;font-weight:bold}
 h1{font-size:24px;margin:8px 0 12px}
 p{font-size:14px;line-height:1.6;color:#65746b}
 #status{font-weight:bold;color:#07583e;overflow-wrap:anywhere}
 a{display:inline-block;margin-top:18px;padding:12px 18px;border-radius:8px;background:#07583e;color:white;text-decoration:none;font-weight:bold;font-size:13px}
 small{display:block;margin-top:18px;color:#7a8980;line-height:1.5}
+
+/* ORIKAEZE HUB — PROFESSIONAL VISUAL SYSTEM */
+:root{--hub-green:#07583e;--hub-accent:#078052;--hub-ink:#172b23;--hub-muted:#718078;--hub-line:#e5ece6;--hub-soft:#f3f8f4}
+html{scroll-behavior:smooth}
+body{background:var(--hub-soft);color:var(--hub-ink);-webkit-font-smoothing:antialiased}
+header{position:relative;z-index:5;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(17,55,35,.045);padding-top:16px;padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:10px;min-width:max-content}
+.brand strong{font-size:15px;letter-spacing:.35px;color:var(--hub-green)}
+.brand strong:before{content:"O";display:inline-grid;place-items:center;width:35px;height:35px;margin-right:9px;border-radius:11px;background:linear-gradient(145deg,#0b7652,#06432f);color:#fff;font-size:17px;font-weight:800;box-shadow:0 5px 12px rgba(7,88,62,.18);vertical-align:middle}
+.brand small{display:block;margin-top:1px;letter-spacing:.15px}
+nav{align-items:center}
+nav a{padding:7px 9px;border-radius:7px;transition:background .2s ease,color .2s ease}
+nav a:hover{background:#edf6f0;color:var(--hub-green)}
+a,button,input,select{ -webkit-tap-highlight-color:transparent }
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(7,128,82,.25);outline-offset:2px}
+button,.btn,.start,.home{transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+button.continue,.btn.green,.start,.home{box-shadow:0 7px 16px rgba(7,88,62,.13)}
+button.continue:hover,.btn.green:hover,.start:hover,.home:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(7,88,62,.2)}
+input,select{transition:border-color .2s ease,box-shadow .2s ease}
+input:focus,select:focus{border-color:var(--hub-accent);box-shadow:0 0 0 3px rgba(7,128,82,.1);outline:0}
+.form-card,.card,.step,.hero-card{box-shadow:0 14px 38px rgba(18,60,32,.055)}
+.form-card{border-radius:18px;border-color:#e2ebe4}
+label{color:#28483a}
+footer{border-top:1px solid var(--hub-line);line-height:1.8}
+footer strong{letter-spacing:.5px;color:var(--hub-green)}
+@media(max-width:750px){header{gap:12px}.brand strong{font-size:14px}nav a{padding:6px 5px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
