@@ -100,28 +100,6 @@ async function processPaidOrder(env, reference) {
     };
   }
 
-  if (order.delivery_status === "processing") {
-    // MELE purchase references are idempotent. If a previous Worker execution
-    // stopped after taking the lock, allow a safe retry after two minutes.
-    const recovery = await env.DB.prepare(`
-      UPDATE orders
-      SET updated_at = CURRENT_TIMESTAMP
-      WHERE reference = ?
-        AND payment_status = 'success'
-        AND delivery_status = 'processing'
-        AND updated_at < datetime('now', '-2 minutes')
-    `).bind(reference).run();
-
-    if (!recovery.meta.changes) {
-      return {
-        success: false,
-        message: "Payment is confirmed and delivery is being processed.",
-        reference,
-        delivery_status: "processing"
-      };
-    }
-  }
-
   if (order.delivery_status === "pending_review") {
     return {
       success: false,
@@ -155,14 +133,24 @@ async function processPaidOrder(env, reference) {
 
   await getLiveStatus(env);
 
+  // Claim a new paid order, or reclaim a processing order whose previous
+  // execution stalled for over two minutes. This single conditional UPDATE is
+  // the atomic lock: only one request can claim either state at a time.
+  // Reusing the same MELE reference makes a recovery attempt idempotent.
   const lock = await env.DB.prepare(`
     UPDATE orders
     SET payment_status = 'success',
         delivery_status = 'processing',
         updated_at = CURRENT_TIMESTAMP
     WHERE reference = ?
-      AND payment_status = 'pending'
-      AND delivery_status = 'pending'
+      AND (
+        (payment_status IN ('pending', 'success')
+          AND delivery_status = 'pending')
+        OR
+        (payment_status = 'success'
+          AND delivery_status = 'processing'
+          AND updated_at < datetime('now', '-2 minutes'))
+      )
   `).bind(reference).run();
 
   if (!lock.meta.changes) {
