@@ -119,13 +119,20 @@ async function processPaidOrder(env, reference) {
     throw new Error("Paystack verification service is temporarily unavailable.");
   }
 
-  if (payment.data?.status !== "success" ||
-      payment.data?.currency !== "NGN" ||
+  // A signed charge.success webhook can arrive just before Paystack's
+  // verification endpoint reflects the final status. Treat that as temporary
+  // so Paystack retries the webhook rather than silently losing fulfillment.
+  if (payment.data?.status !== "success") {
+    throw new Error("Paystack has not confirmed the transaction yet.");
+  }
+
+  // These fields must match the stored order exactly before any provider debit.
+  if (payment.data?.currency !== "NGN" ||
       Number(payment.data?.amount) !== Number(order.amount) ||
       payment.data?.reference !== reference) {
     return {
       success: false,
-      message: "Payment could not be verified.",
+      message: "Payment details do not match this order.",
       reference,
       status: 400
     };
@@ -196,10 +203,12 @@ async function processPaidOrder(env, reference) {
     delivery = {};
   }
 
+  // MELE's documented success envelope includes data.status="success".
+  // A top-level status:true alone only confirms the API request was accepted;
+  // it must not be treated as proof that the customer's top-up was delivered.
   const delivered =
     purchaseResponse.ok &&
-    (delivery.status === true ||
-     delivery.data?.status === "success" ||
+    (delivery.data?.status === "success" ||
      delivery.data?.status === "delivered");
 
   await env.DB.prepare(`
@@ -290,7 +299,9 @@ export default {
 
       try {
         const result = await processPaidOrder(env, clean(event.data.reference));
-        if (result.status && result.status >= 500) {
+        // Missing orders can be a brief race/consistency issue. Ask Paystack
+        // to retry rather than acknowledging and permanently dropping the event.
+        if (result.status === 404 || (result.status && result.status >= 500)) {
           return reply({ success: false, message: "Payment event could not be processed yet." }, 500);
         }
         return reply({ success: true, message: "Payment event processed." });
