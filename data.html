@@ -511,7 +511,7 @@ function getPlanValidity(plan) {
 
   return {
     key: "validity-unavailable",
-    label: "Validity not provided",
+    label: "Available plans",
     sort: Number.MAX_SAFE_INTEGER
   };
 
@@ -579,7 +579,7 @@ function validityGroupLabel(key) {
 
   const category = validityCategories.find(item => item.key === key);
 
-  return category ? category.label : "Validity not provided";
+  return category ? category.label : "Available plans";
 
 }
 
