@@ -441,7 +441,7 @@ function getPlanValidity(plan) {
 
     if (!text) continue;
 
-    let match = text.match(/(\\d+)\\s*(days?|d)\\b/);
+    let match = text.match(/(\d+)\s*(days?|d)\b/);
 
     if (match) {
       const amount = Number(match[1]);
@@ -452,7 +452,7 @@ function getPlanValidity(plan) {
       };
     }
 
-    match = text.match(/(\\d+)\\s*(weeks?|wks?|wk)\\b/);
+    match = text.match(/(\d+)\s*(weeks?|wks?|wk)\b/);
 
     if (match) {
       const amount = Number(match[1]);
@@ -463,7 +463,7 @@ function getPlanValidity(plan) {
       };
     }
 
-    match = text.match(/(\\d+)\\s*(months?|mos?)\\b/);
+    match = text.match(/(\d+)\s*(months?|mos?)\b/);
 
     if (match) {
       const amount = Number(match[1]);
@@ -474,7 +474,7 @@ function getPlanValidity(plan) {
       };
     }
 
-    match = text.match(/(\\d+)\\s*(years?|yrs?)\\b/);
+    match = text.match(/(\d+)\s*(years?|yrs?)\b/);
 
     if (match) {
       const amount = Number(match[1]);
@@ -485,19 +485,19 @@ function getPlanValidity(plan) {
       };
     }
 
-    if (/\\b(daily|24\\s*hours?)\\b/.test(text)) {
+    if (/\b(daily|24\s*hours?)\b/.test(text)) {
       return { key: "1-days", label: "1 Day", sort: 1 };
     }
 
-    if (/\\b(weekly)\\b/.test(text)) {
+    if (/\b(weekly)\b/.test(text)) {
       return { key: "1-weeks", label: "1 Week", sort: 7 };
     }
 
-    if (/\\b(monthly)\\b/.test(text)) {
+    if (/\b(monthly)\b/.test(text)) {
       return { key: "1-months", label: "1 Month", sort: 30 };
     }
 
-    if (/\\b(yearly|annually)\\b/.test(text)) {
+    if (/\b(yearly|annually)\b/.test(text)) {
       return { key: "1-years", label: "1 Year", sort: 365 };
     }
 
