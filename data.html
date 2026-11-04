@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07583e">
 
 <title>Buy Data | ORIKAEZE HUB</title>
 
@@ -65,7 +66,7 @@ nav a:hover {
 }
 
 main {
-  max-width: 650px;
+  max-width: 700px;
   margin: 55px auto;
   padding: 0 20px;
 }
@@ -78,13 +79,14 @@ main {
 }
 
 h1 {
-  font-size: 35px;
+  font-size: clamp(32px,5vw,40px);
+  letter-spacing:-1px;
   margin: 12px 0;
 }
 
 .intro {
-  color: #718078;
-  font-size: 14px;
+  color: #64766b;
+  font-size: 15px;
   margin-bottom: 25px;
 }
 
@@ -276,6 +278,34 @@ footer {
     padding: 8px 11px;
   }
 }
+
+/* ORIKAEZE HUB — PROFESSIONAL VISUAL SYSTEM */
+:root{--hub-green:#07583e;--hub-accent:#078052;--hub-ink:#172b23;--hub-muted:#718078;--hub-line:#e5ece6;--hub-soft:#f3f8f4}
+html{scroll-behavior:smooth}
+body{background:var(--hub-soft);color:var(--hub-ink);-webkit-font-smoothing:antialiased}
+header{position:relative;z-index:5;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(17,55,35,.045);padding-top:16px;padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:10px;min-width:max-content}
+.brand strong{font-size:15px;letter-spacing:.35px;color:var(--hub-green)}
+.brand strong:before{content:"O";display:inline-grid;place-items:center;width:35px;height:35px;margin-right:9px;border-radius:11px;background:linear-gradient(145deg,#0b7652,#06432f);color:#fff;font-size:17px;font-weight:800;box-shadow:0 5px 12px rgba(7,88,62,.18);vertical-align:middle}
+.brand small{display:block;margin-top:1px;letter-spacing:.15px}
+nav{align-items:center}
+nav a{padding:7px 9px;border-radius:7px;transition:background .2s ease,color .2s ease}
+nav a:hover{background:#edf6f0;color:var(--hub-green)}
+a,button,input,select{ -webkit-tap-highlight-color:transparent }
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(7,128,82,.25);outline-offset:2px}
+button,.btn,.start,.home{transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+button.continue,.btn.green,.start,.home{box-shadow:0 7px 16px rgba(7,88,62,.13)}
+button.continue:hover,.btn.green:hover,.start:hover,.home:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(7,88,62,.2)}
+input,select{transition:border-color .2s ease,box-shadow .2s ease}
+input:focus,select:focus{border-color:var(--hub-accent);box-shadow:0 0 0 3px rgba(7,128,82,.1);outline:0}
+.form-card,.card,.step,.hero-card{box-shadow:0 14px 38px rgba(18,60,32,.055)}
+.form-card{border-radius:18px;border-color:#e2ebe4}
+label{color:#28483a}
+footer{border-top:1px solid var(--hub-line);line-height:1.8}
+footer strong{letter-spacing:.5px;color:var(--hub-green)}
+@media(max-width:750px){header{gap:12px}.brand strong{font-size:14px}nav a{padding:6px 5px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 

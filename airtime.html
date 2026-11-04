@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07583e">
 <title>Buy Airtime | ORIKAEZE HUB</title>
 
 <style>
@@ -15,15 +16,15 @@ header{background:white;padding:18px 6%;display:flex;justify-content:space-betwe
 nav{display:flex;gap:22px;font-size:13px;font-weight:bold}
 nav a:hover{color:#078052}
 .home{background:#07583e;color:white;padding:10px 17px;border-radius:7px;font-size:12px}
-main{max-width:650px;margin:55px auto;padding:0 20px}
+main{max-width:700px;margin:58px auto;padding:0 20px}
 .tag{color:#078052;font-size:11px;font-weight:bold;letter-spacing:2px}
-h1{font-size:35px;margin:12px 0}
-.intro{color:#718078;font-size:14px;margin-bottom:25px}
+h1{font-size:clamp(32px,5vw,40px);letter-spacing:-1px;margin:12px 0}
+.intro{color:#64766b;font-size:15px;margin-bottom:27px}
 .form-card{background:white;padding:28px;border-radius:14px;border:1px solid #e5ece6;box-shadow:0 12px 35px #123c200b}
 label{display:block;font-size:13px;font-weight:bold;margin:18px 0 8px}
 input,select{width:100%;height:49px;border:1px solid #dce6df;border-radius:7px;padding:0 13px;font-size:14px;background:white}
-.networks{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-.networks button{background:white;border:1px solid #dce6df;border-radius:8px;padding:12px 4px;font-weight:bold;color:#172b23;cursor:pointer}
+.networks{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.networks button{background:white;border:1px solid #dce6df;border-radius:10px;padding:14px 4px;font-weight:bold;color:#172b23;cursor:pointer}
 .networks button.selected{background:#eaf6ef;border:2px solid #078052;color:#07583e}
 
 /* NETWORK BRAND COLOURS */
@@ -63,6 +64,34 @@ nav{order:3;width:100%;justify-content:space-between;gap:8px;font-size:11px}
 main{margin:40px auto}
 h1{font-size:30px}
 }
+
+/* ORIKAEZE HUB — PROFESSIONAL VISUAL SYSTEM */
+:root{--hub-green:#07583e;--hub-accent:#078052;--hub-ink:#172b23;--hub-muted:#718078;--hub-line:#e5ece6;--hub-soft:#f3f8f4}
+html{scroll-behavior:smooth}
+body{background:var(--hub-soft);color:var(--hub-ink);-webkit-font-smoothing:antialiased}
+header{position:relative;z-index:5;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(17,55,35,.045);padding-top:16px;padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:10px;min-width:max-content}
+.brand strong{font-size:15px;letter-spacing:.35px;color:var(--hub-green)}
+.brand strong:before{content:"O";display:inline-grid;place-items:center;width:35px;height:35px;margin-right:9px;border-radius:11px;background:linear-gradient(145deg,#0b7652,#06432f);color:#fff;font-size:17px;font-weight:800;box-shadow:0 5px 12px rgba(7,88,62,.18);vertical-align:middle}
+.brand small{display:block;margin-top:1px;letter-spacing:.15px}
+nav{align-items:center}
+nav a{padding:7px 9px;border-radius:7px;transition:background .2s ease,color .2s ease}
+nav a:hover{background:#edf6f0;color:var(--hub-green)}
+a,button,input,select{ -webkit-tap-highlight-color:transparent }
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(7,128,82,.25);outline-offset:2px}
+button,.btn,.start,.home{transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+button.continue,.btn.green,.start,.home{box-shadow:0 7px 16px rgba(7,88,62,.13)}
+button.continue:hover,.btn.green:hover,.start:hover,.home:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(7,88,62,.2)}
+input,select{transition:border-color .2s ease,box-shadow .2s ease}
+input:focus,select:focus{border-color:var(--hub-accent);box-shadow:0 0 0 3px rgba(7,128,82,.1);outline:0}
+.form-card,.card,.step,.hero-card{box-shadow:0 14px 38px rgba(18,60,32,.055)}
+.form-card{border-radius:18px;border-color:#e2ebe4}
+label{color:#28483a}
+footer{border-top:1px solid var(--hub-line);line-height:1.8}
+footer strong{letter-spacing:.5px;color:var(--hub-green)}
+@media(max-width:750px){header{gap:12px}.brand strong{font-size:14px}nav a{padding:6px 5px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 
