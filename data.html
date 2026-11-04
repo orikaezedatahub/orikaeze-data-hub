@@ -315,32 +315,11 @@ placeholder="08012345678"
 <label>Select plan validity</label>
 
 <div class="plan-filters" id="planFilters">
-
-<button type="button" class="active" data-filter="all">
-All Plans
-</button>
-
-<button type="button" data-filter="daily">
-Daily
-</button>
-
-<button type="button" data-filter="weekly">
-Weekly
-</button>
-
-<button type="button" data-filter="monthly">
-Monthly
-</button>
-
-<button type="button" data-filter="other">
-Other
-</button>
-
+  <button type="button" class="active" data-filter="all">All Plans</button>
 </div>
 
 <p class="plan-hint">
-Choose a validity period to narrow down the available bundles.
-Plans without clearly identified validity appear under Other.
+Choose the exact validity period shown for each available bundle.
 </p>
 
 <label for="plan">Select data bundle</label>
@@ -389,13 +368,15 @@ const continueBtn = document.getElementById("continueBtn");
 
 const message = document.getElementById("message");
 
-const filterButtons = document.querySelectorAll("#planFilters button");
+const filterContainer = document.getElementById("planFilters");
 
 let selectedNetwork = "MTN";
 
 let selectedValidity = "all";
 
 let availablePlans = [];
+
+let validityCategories = [];
 
 
 /* NETWORK SELECTION */
@@ -419,89 +400,168 @@ buttons.forEach(button => {
 
 /* VALIDITY FILTER SELECTION */
 
-filterButtons.forEach(button => {
+filterContainer.addEventListener("click", event => {
 
-  button.addEventListener("click", () => {
+  const button = event.target.closest("button[data-filter]");
 
-    filterButtons.forEach(item => item.classList.remove("active"));
+  if (!button) return;
 
-    button.classList.add("active");
+  filterContainer.querySelectorAll("button").forEach(item =>
+    item.classList.remove("active")
+  );
 
-    selectedValidity = button.dataset.filter;
+  button.classList.add("active");
 
-    showPlans();
+  selectedValidity = button.dataset.filter;
 
-  });
+  showPlans();
 
 });
 
 
-/* IDENTIFY DATA BUNDLE VALIDITY */
+/* READ THE VALIDITY ACTUALLY SUPPLIED FOR EACH PLAN */
 
 function getPlanValidity(plan) {
 
-  const details = [
-
+  const fields = [
     plan.validity,
-    plan.duration,
     plan.validity_period,
+    plan.duration,
     plan.plan_validity,
     plan.period,
     plan.plan_name,
     plan.name
+  ];
 
-  ]
+  for (const value of fields) {
 
-  .filter(value => value !== undefined && value !== null)
+    if (value === undefined || value === null) continue;
 
-  .join(" ")
+    const text = String(value).trim().toLowerCase();
 
-  .toLowerCase();
+    if (!text) continue;
 
+    let match = text.match(/(\d+)\s*(days?|d)\b/);
 
-  if (/\b(daily|day|24\s*hours?|1\s*day)\b/.test(details)) {
+    if (match) {
+      const amount = Number(match[1]);
+      return {
+        key: amount + "-days",
+        label: amount + (amount === 1 ? " Day" : " Days"),
+        sort: amount
+      };
+    }
 
-    return "daily";
+    match = text.match(/(\d+)\s*(weeks?|wks?|wk)\b/);
+
+    if (match) {
+      const amount = Number(match[1]);
+      return {
+        key: amount + "-weeks",
+        label: amount + (amount === 1 ? " Week" : " Weeks"),
+        sort: amount * 7
+      };
+    }
+
+    match = text.match(/(\d+)\s*(months?|mos?)\b/);
+
+    if (match) {
+      const amount = Number(match[1]);
+      return {
+        key: amount + "-months",
+        label: amount + (amount === 1 ? " Month" : " Months"),
+        sort: amount * 30
+      };
+    }
+
+    match = text.match(/(\d+)\s*(years?|yrs?)\b/);
+
+    if (match) {
+      const amount = Number(match[1]);
+      return {
+        key: amount + "-years",
+        label: amount + (amount === 1 ? " Year" : " Years"),
+        sort: amount * 365
+      };
+    }
+
+    if (/\b(daily|24\s*hours?)\b/.test(text)) {
+      return { key: "1-days", label: "1 Day", sort: 1 };
+    }
+
+    if (/\b(weekly)\b/.test(text)) {
+      return { key: "1-weeks", label: "1 Week", sort: 7 };
+    }
+
+    if (/\b(monthly)\b/.test(text)) {
+      return { key: "1-months", label: "1 Month", sort: 30 };
+    }
+
+    if (/\b(yearly|annually)\b/.test(text)) {
+      return { key: "1-years", label: "1 Year", sort: 365 };
+    }
 
   }
 
-
-  if (/\b(weekly|week|7\s*days?)\b/.test(details)) {
-
-    return "weekly";
-
-  }
-
-
-  if (/\b(monthly|month|30\s*days?|31\s*days?|28\s*days?)\b/.test(details)) {
-
-    return "monthly";
-
-  }
-
-
-  return "other";
+  return {
+    key: "validity-unavailable",
+    label: "Validity not provided",
+    sort: Number.MAX_SAFE_INTEGER
+  };
 
 }
 
 
-/* CATEGORY NAMES */
+/* BUILD FILTERS FROM REAL PLAN VALIDITIES */
 
-function validityLabel(category) {
+function buildValidityFilters() {
 
-  const labels = {
+  const unique = new Map();
 
-    daily: "Daily Plans",
+  availablePlans.forEach(plan => {
 
-    weekly: "Weekly Plans",
+    const validity = getPlanValidity(plan);
 
-    monthly: "Monthly Plans",
+    if (!unique.has(validity.key)) {
+      unique.set(validity.key, validity);
+    }
 
-    other: "Other Plans"
+  });
 
-  };
+  validityCategories = Array.from(unique.values())
+    .sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
 
-  return labels[category];
+  filterContainer.innerHTML = "";
+
+  const allButton = document.createElement("button");
+  allButton.type = "button";
+  allButton.dataset.filter = "all";
+  allButton.textContent = "All Plans";
+  allButton.classList.add("active");
+  filterContainer.appendChild(allButton);
+
+  validityCategories.forEach(validity => {
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.filter = validity.key;
+    button.textContent = validity.label;
+    filterContainer.appendChild(button);
+
+  });
+
+  selectedValidity = "all";
+
+}
+
+
+/* VALIDITY LABEL FOR PLAN GROUPS */
+
+function validityGroupLabel(key) {
+
+  const category = validityCategories.find(item => item.key === key);
+
+  return category ? category.label : "Validity not provided";
 
 }
 
@@ -525,6 +585,8 @@ async function loadPlans() {
     }
 
     availablePlans = result.plans;
+
+    buildValidityFilters();
 
     showPlans();
 
@@ -554,43 +616,29 @@ function showPlans() {
     String(plan.network).toUpperCase() === selectedNetwork &&
 
     (
-
       selectedValidity === "all" ||
-
-      getPlanValidity(plan) === selectedValidity
-
+      getPlanValidity(plan).key === selectedValidity
     )
 
   );
 
-
   planSelect.innerHTML =
     '<option value="">Choose a data bundle</option>';
 
+  const groups = selectedValidity === "all"
+    ? validityCategories
+    : validityCategories.filter(item => item.key === selectedValidity);
 
-  const categories = selectedValidity === "all"
-
-    ? ["daily", "weekly", "monthly", "other"]
-
-    : [selectedValidity];
-
-
-  categories.forEach(category => {
+  groups.forEach(category => {
 
     const matchingPlans = plans.filter(plan =>
-
-      getPlanValidity(plan) === category
-
+      getPlanValidity(plan).key === category.key
     );
-
 
     if (!matchingPlans.length) return;
 
-
     const group = document.createElement("optgroup");
-
-    group.label = validityLabel(category);
-
+    group.label = category.label;
 
     matchingPlans.forEach(plan => {
 
@@ -598,27 +646,24 @@ function showPlans() {
 
       option.value = String(plan.plan_id);
 
+      const planName = plan.plan_name || plan.data_size || "Data bundle";
+
       option.textContent =
-        `${plan.plan_name || plan.data_size} — ₦${Number(plan.price).toLocaleString("en-NG")}`;
+        `${planName} (${category.label}) — ₦${Number(plan.price).toLocaleString("en-NG")}`;
 
       group.appendChild(option);
 
     });
 
-
     planSelect.appendChild(group);
 
   });
 
-
   if (!plans.length) {
 
     const option = document.createElement("option");
-
     option.value = "";
-
-    option.textContent = "No plans available in this category";
-
+    option.textContent = "No plans available for this validity period";
     planSelect.appendChild(option);
 
   }
