@@ -25,6 +25,33 @@ input,select{width:100%;height:49px;border:1px solid #dce6df;border-radius:7px;p
 .networks{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .networks button{background:white;border:1px solid #dce6df;border-radius:8px;padding:12px 4px;font-weight:bold;color:#172b23;cursor:pointer}
 .networks button.selected{background:#eaf6ef;border:2px solid #078052;color:#07583e}
+
+/* NETWORK BRAND COLOURS */
+.networks button[data-network="MTN"]{
+  background:#FFCB05;
+  border-color:#FFCB05;
+  color:#111111;
+}
+.networks button[data-network="AIRTEL"]{
+  background:#E31E25;
+  border-color:#E31E25;
+  color:#FFFFFF;
+}
+.networks button[data-network="GLO"]{
+  background:#00A859;
+  border-color:#00A859;
+  color:#FFFFFF;
+}
+.networks button[data-network="9MOBILE"]{
+  background:#A8CF38;
+  border-color:#A8CF38;
+  color:#172B23;
+}
+.networks button.selected{
+  border:3px solid #172B23;
+  padding:11px 3px;
+  box-shadow:0 0 0 2px #FFFFFF,0 0 0 4px #172B23;
+}
 button.continue{width:100%;background:#078052;color:white;border:0;border-radius:7px;padding:15px;font-weight:bold;margin-top:25px;font-size:14px;cursor:pointer}
 button:disabled{opacity:.6;cursor:not-allowed}
 #message{font-size:13px;margin-top:15px;overflow-wrap:anywhere}
