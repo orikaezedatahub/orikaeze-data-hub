@@ -15,6 +15,28 @@ const json = (data, status = 200, origin = "*") =>
 
 const clean = value => String(value || "").trim();
 
+function normalizeNetwork(value) {
+  const key = String(value || "").trim().toUpperCase().replace(/[\\s_-]/g, "");
+  if (key === "MTN") return "MTN";
+  if (key === "GLO" || key === "GLOMOBILE") return "GLO";
+  if (key === "AIRTEL") return "AIRTEL";
+  if (["9MOBILE", "ETISALAT", "T2MOBILE"].includes(key)) return "9MOBILE";
+  return key;
+}
+
+function extractPlans(result) {
+  const candidates = [
+    result?.plans,
+    result?.data?.plans,
+    Array.isArray(result?.data) ? result.data : null,
+    result?.results,
+    result?.data?.results,
+    result?.data?.data
+  ];
+  const plans = candidates.find(Array.isArray);
+  return plans || [];
+}
+
 const validPhone = value => /^0[789][01]\d{8}$/.test(value);
 
 const money = value => Math.round(Number(value) * 100);
@@ -342,7 +364,7 @@ export default {
 
         return reply({
           success: true,
-          plans: result.plans || result.data?.plans || []
+          plans: extractPlans(result).map(plan => ({ ...plan, network: normalizeNetwork(plan.network) }))
         });
       } catch {
         return reply({
@@ -394,11 +416,11 @@ export default {
       if (service === "data") {
         const plansResponse = await mele(env, "/data/plans");
         const plansResult = await plansResponse.json();
-        const plans = plansResult.plans || plansResult.data?.plans || [];
+        const plans = extractPlans(plansResult);
 
         const plan = plans.find(p =>
           String(p.plan_id) === productId &&
-          String(p.network).toUpperCase() === network
+          normalizeNetwork(p.network) === network
         );
 
         if (!plansResponse.ok || !plan) {
