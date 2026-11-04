@@ -196,6 +196,14 @@ async function processPaidOrder(env, reference) {
         }
       });
 
+  // Transient provider failures must leave the order in "processing" so a
+  // webhook retry can safely repeat the same idempotent MELE reference.
+  if (purchaseResponse.status === 408 ||
+      purchaseResponse.status === 429 ||
+      purchaseResponse.status >= 500) {
+    throw new Error("MELE purchase service is temporarily unavailable.");
+  }
+
   let delivery;
   try {
     delivery = await purchaseResponse.json();
