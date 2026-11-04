@@ -53,8 +53,198 @@ async function getLiveStatus(env) {
   return result.data;
 }
 
+function constantTimeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+async function validPaystackSignature(rawBody, signature, secret) {
+  if (!signature || !secret) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-512" },
+    false,
+    ["sign"]
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(rawBody)
+  );
+  const expected = Array.from(new Uint8Array(digest))
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return constantTimeEqual(expected, signature.toLowerCase());
+}
+
+async function processPaidOrder(env, reference) {
+  const order = await env.DB.prepare(
+    "SELECT * FROM orders WHERE reference = ?"
+  ).bind(reference).first();
+
+  if (!order) {
+    return { success: false, message: "Order not found.", status: 404 };
+  }
+
+  if (order.delivery_status === "delivered") {
+    return {
+      success: true,
+      message: "Service already delivered.",
+      reference,
+      delivery_status: "delivered"
+    };
+  }
+
+  if (order.delivery_status === "pending_review") {
+    return {
+      success: false,
+      message: "Payment was received but delivery needs review. Please do not pay again.",
+      reference,
+      delivery_status: "pending_review"
+    };
+  }
+
+  const verification = await paystack(
+    env,
+    "/transaction/verify/" + encodeURIComponent(reference)
+  );
+  const payment = await verification.json();
+
+  if (!verification.ok || !payment.status) {
+    throw new Error("Paystack verification service is temporarily unavailable.");
+  }
+
+  // A signed charge.success webhook can arrive just before Paystack's
+  // verification endpoint reflects the final status. Treat that as temporary
+  // so Paystack retries the webhook rather than silently losing fulfillment.
+  if (payment.data?.status !== "success") {
+    throw new Error("Paystack has not confirmed the transaction yet.");
+  }
+
+  // These fields must match the stored order exactly before any provider debit.
+  if (payment.data?.currency !== "NGN" ||
+      Number(payment.data?.amount) !== Number(order.amount) ||
+      payment.data?.reference !== reference) {
+    return {
+      success: false,
+      message: "Payment details do not match this order.",
+      reference,
+      status: 400
+    };
+  }
+
+  await getLiveStatus(env);
+
+  // Claim a new paid order, or reclaim a processing order whose previous
+  // execution stalled for over two minutes. This single conditional UPDATE is
+  // the atomic lock: only one request can claim either state at a time.
+  // Reusing the same MELE reference makes a recovery attempt idempotent.
+  const lock = await env.DB.prepare(`
+    UPDATE orders
+    SET payment_status = 'success',
+        delivery_status = 'processing',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE reference = ?
+      AND (
+        (payment_status IN ('pending', 'success')
+          AND delivery_status = 'pending')
+        OR
+        (payment_status = 'success'
+          AND delivery_status = 'processing'
+          AND updated_at < datetime('now', '-2 minutes'))
+      )
+  `).bind(reference).run();
+
+  if (!lock.meta.changes) {
+    const latest = await env.DB.prepare(
+      "SELECT delivery_status FROM orders WHERE reference = ?"
+    ).bind(reference).first();
+
+    return {
+      success: latest?.delivery_status === "delivered",
+      message: latest?.delivery_status === "delivered"
+        ? "Service already delivered."
+        : "Payment is confirmed or being processed. Please do not pay again.",
+      reference,
+      delivery_status: latest?.delivery_status || "unknown"
+    };
+  }
+
+  const providerReference = "ODH_" + reference;
+  const purchaseResponse = order.service === "data"
+    ? await mele(env, "/data/purchase", {
+        method: "POST",
+        body: {
+          network: order.network,
+          phone_number: order.phone,
+          plan_id: Number(order.product_id),
+          reference: providerReference
+        }
+      })
+    : await mele(env, "/airtime/purchase", {
+        method: "POST",
+        body: {
+          network: order.network,
+          phone_number: order.phone,
+          amount: Number(order.product_id),
+          reference: providerReference
+        }
+      });
+
+  // Transient provider failures must leave the order in "processing" so a
+  // webhook retry can safely repeat the same idempotent MELE reference.
+  if (purchaseResponse.status === 408 ||
+      purchaseResponse.status === 429 ||
+      purchaseResponse.status >= 500) {
+    throw new Error("MELE purchase service is temporarily unavailable.");
+  }
+
+  let delivery;
+  try {
+    delivery = await purchaseResponse.json();
+  } catch {
+    delivery = {};
+  }
+
+  // MELE's documented success envelope includes data.status="success".
+  // A top-level status:true alone only confirms the API request was accepted;
+  // it must not be treated as proof that the customer's top-up was delivered.
+  const delivered =
+    purchaseResponse.ok &&
+    (delivery.data?.status === "success" ||
+     delivery.data?.status === "delivered");
+
+  await env.DB.prepare(`
+    UPDATE orders
+    SET provider_reference = ?,
+        delivery_status = ?,
+        provider_response = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE reference = ?
+  `).bind(
+    providerReference,
+    delivered ? "delivered" : "pending_review",
+    JSON.stringify(delivery).slice(0, 5000),
+    reference
+  ).run();
+
+  return {
+    success: delivered,
+    reference,
+    delivery_status: delivered ? "delivered" : "pending_review",
+    message: delivered
+      ? "Payment successful. Your service has been delivered."
+      : "Payment received. Your order is being checked. Please do not pay again."
+  };
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
     const allowedOrigin =
@@ -84,6 +274,51 @@ export default {
         service: "ORIKAEZE DATA HUB",
         message: "Backend is running."
       });
+    }
+
+
+    if (url.pathname === "/api/paystack-webhook" && request.method === "POST") {
+      const rawBody = await request.text();
+      const signature = request.headers.get("x-paystack-signature") || "";
+      const valid = await validPaystackSignature(
+        rawBody,
+        signature,
+        env.PAYSTACK_SECRET_KEY
+      );
+
+      if (!valid) {
+        return reply({ success: false, message: "Invalid webhook signature." }, 401);
+      }
+
+      let event;
+      try {
+        event = JSON.parse(rawBody);
+      } catch {
+        return reply({ success: false, message: "Invalid webhook payload." }, 400);
+      }
+
+      if (event.event !== "charge.success" || !event.data?.reference) {
+        return reply({ success: true, message: "Event acknowledged." });
+      }
+
+      if (!env.DB || !env.PAYSTACK_SECRET_KEY || !env.MELE_SECRET_KEY) {
+        return reply({ success: false, message: "Backend configuration is incomplete." }, 503);
+      }
+
+      try {
+        const result = await processPaidOrder(env, clean(event.data.reference));
+        // Missing orders can be a brief race/consistency issue. Ask Paystack
+        // to retry rather than acknowledging and permanently dropping the event.
+        if (result.status === 404 || (result.status && result.status >= 500)) {
+          return reply({ success: false, message: "Payment event could not be processed yet." }, 500);
+        }
+        return reply({ success: true, message: "Payment event processed." });
+      } catch (error) {
+        console.error("Paystack webhook processing failed:", error);
+        // A non-2xx response asks Paystack to retry the event. The MELE
+        // reference is idempotent, so a retry cannot create a duplicate order.
+        return reply({ success: false, message: "Payment event processing failed. Please retry." }, 500);
+      }
     }
 
     if (!env.DB || !env.PAYSTACK_SECRET_KEY || !env.MELE_SECRET_KEY) {
@@ -228,7 +463,7 @@ export default {
               amount: money(customerAmount),
               currency: "NGN",
               reference,
-              callback_url: env.PAYSTACK_CALLBACK_URL,
+              callback_url: env.PAYSTACK_CALLBACK_URL || "https://orikaezedatahub.github.io/orikaeze-data-hub/payment.html",
               metadata: {
                 service,
                 network,
@@ -270,7 +505,6 @@ export default {
     if (url.pathname === "/api/verify-payment" &&
         request.method === "POST") {
       let body;
-
       try {
         body = await request.json();
       } catch {
@@ -278,137 +512,16 @@ export default {
       }
 
       const reference = clean(body.reference);
-
       if (!reference || reference.length > 100) {
-        return reply({
-          success: false,
-          message: "Invalid payment reference."
-        }, 400);
+        return reply({ success: false, message: "Invalid payment reference." }, 400);
       }
 
       try {
-        const order = await env.DB.prepare(`
-          SELECT * FROM orders WHERE reference = ?
-        `).bind(reference).first();
-
-        if (!order) {
-          return reply({
-            success: false,
-            message: "Order not found."
-          }, 404);
-        }
-
-        if (order.delivery_status === "delivered") {
-          return reply({
-            success: true,
-            message: "Service already delivered.",
-            reference
-          });
-        }
-
-        const verification = await paystack(
-          env,
-          "/transaction/verify/" + encodeURIComponent(reference)
-        );
-
-        const payment = await verification.json();
-
-        if (!verification.ok || !payment.status ||
-            payment.data?.status !== "success" ||
-            payment.data?.currency !== "NGN" ||
-            payment.data?.amount !== order.amount ||
-            payment.data?.reference !== reference) {
-          return reply({
-            success: false,
-            message: "Payment could not be verified."
-          }, 400);
-        }
-
-        await getLiveStatus(env);
-
-        const lock = await env.DB.prepare(`
-          UPDATE orders
-          SET payment_status = 'success',
-              delivery_status = 'processing',
-              updated_at = CURRENT_TIMESTAMP
-          WHERE reference = ?
-            AND payment_status = 'pending'
-            AND delivery_status = 'pending'
-        `).bind(reference).run();
-
-        if (!lock.meta.changes) {
-          const latest = await env.DB.prepare(`
-            SELECT delivery_status FROM orders WHERE reference = ?
-          `).bind(reference).first();
-
-          return reply({
-            success: latest?.delivery_status === "delivered",
-            message: "Order is already being processed.",
-            reference
-          });
-        }
-
-        const providerReference = "ODH_" + reference;
-
-        let purchaseResponse;
-
-        if (order.service === "data") {
-          purchaseResponse = await mele(env, "/data/purchase", {
-            method: "POST",
-            body: {
-              network: order.network,
-              phone_number: order.phone,
-              plan_id: Number(order.product_id),
-              reference: providerReference
-            }
-          });
-        } else {
-          purchaseResponse = await mele(env, "/airtime/purchase", {
-            method: "POST",
-            body: {
-              network: order.network,
-              phone_number: order.phone,
-              amount: Number(order.product_id),
-              reference: providerReference
-            }
-          });
-        }
-
-        let delivery;
-
-        try {
-          delivery = await purchaseResponse.json();
-        } catch {
-          delivery = {};
-        }
-
-        const delivered =
-          purchaseResponse.ok &&
-          (delivery.status === true ||
-           delivery.data?.status === "success");
-
-        await env.DB.prepare(`
-          UPDATE orders
-          SET provider_reference = ?,
-              delivery_status = ?,
-              provider_response = ?,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE reference = ?
-        `).bind(
-          providerReference,
-          delivered ? "delivered" : "pending_review",
-          JSON.stringify(delivery).slice(0, 5000),
-          reference
-        ).run();
-
-        return reply({
-          success: delivered,
-          reference,
-          message: delivered
-            ? "Payment successful. Your service has been delivered."
-            : "Payment received. Your order is being checked."
-        });
-      } catch {
+        const result = await processPaidOrder(env, reference);
+        const status = result.status || 200;
+        return reply(result, status);
+      } catch (error) {
+        console.error("Payment verification failed:", error);
         return reply({
           success: false,
           message: "Transaction is being checked. Please do not pay again."
