@@ -101,12 +101,25 @@ async function processPaidOrder(env, reference) {
   }
 
   if (order.delivery_status === "processing") {
-    return {
-      success: false,
-      message: "Payment is confirmed and delivery is being processed.",
-      reference,
-      delivery_status: "processing"
-    };
+    // MELE purchase references are idempotent. If a previous Worker execution
+    // stopped after taking the lock, allow a safe retry after two minutes.
+    const recovery = await env.DB.prepare(`
+      UPDATE orders
+      SET updated_at = CURRENT_TIMESTAMP
+      WHERE reference = ?
+        AND payment_status = 'success'
+        AND delivery_status = 'processing'
+        AND updated_at < datetime('now', '-2 minutes')
+    `).bind(reference).run();
+
+    if (!recovery.meta.changes) {
+      return {
+        success: false,
+        message: "Payment is confirmed and delivery is being processed.",
+        reference,
+        delivery_status: "processing"
+      };
+    }
   }
 
   if (order.delivery_status === "pending_review") {
@@ -284,13 +297,18 @@ export default {
         return reply({ success: false, message: "Backend configuration is incomplete." }, 503);
       }
 
-      ctx.waitUntil(
-        processPaidOrder(env, clean(event.data.reference)).catch(error => {
-          console.error("Paystack webhook processing failed:", error);
-        })
-      );
-
-      return reply({ success: true, message: "Payment event received." });
+      try {
+        const result = await processPaidOrder(env, clean(event.data.reference));
+        if (result.status && result.status >= 500) {
+          return reply({ success: false, message: "Payment event could not be processed yet." }, 500);
+        }
+        return reply({ success: true, message: "Payment event processed." });
+      } catch (error) {
+        console.error("Paystack webhook processing failed:", error);
+        // A non-2xx response asks Paystack to retry the event. The MELE
+        // reference is idempotent, so a retry cannot create a duplicate order.
+        return reply({ success: false, message: "Payment event processing failed. Please retry." }, 500);
+      }
     }
 
     if (!env.DB || !env.PAYSTACK_SECRET_KEY || !env.MELE_SECRET_KEY) {
