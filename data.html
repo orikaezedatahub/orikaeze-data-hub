@@ -393,6 +393,10 @@ buttons.forEach(button => {
 
     selectedNetwork = button.dataset.network;
 
+    // Each network can have different validity periods.
+    // Reset the filter and rebuild it from the selected network's plans.
+    selectedValidity = "all";
+    buildValidityFilters();
     showPlans();
 
   });
@@ -516,11 +520,23 @@ function getPlanValidity(plan) {
 
 /* BUILD FILTERS FROM REAL PLAN VALIDITIES */
 
+function normalizeNetwork(value) {
+  const key = String(value || "").trim().toUpperCase().replace(/[\s_-]/g, "");
+  if (key === "GLO" || key === "GLOMOBILE") return "GLO";
+  if (["9MOBILE", "ETISALAT", "T2MOBILE"].includes(key)) return "9MOBILE";
+  return key;
+}
+
+
+/* BUILD FILTERS FROM THE SELECTED NETWORK'S REAL PLAN VALIDITIES */
+
 function buildValidityFilters() {
 
   const unique = new Map();
 
-  availablePlans.forEach(plan => {
+  availablePlans
+    .filter(plan => normalizeNetwork(plan.network) === selectedNetwork)
+    .forEach(plan => {
 
     const validity = getPlanValidity(plan);
 
@@ -615,7 +631,7 @@ function showPlans() {
 
   const plans = availablePlans.filter(plan =>
 
-    String(plan.network).toUpperCase() === selectedNetwork &&
+    normalizeNetwork(plan.network) === selectedNetwork &&
 
     (
       selectedValidity === "all" ||
@@ -709,7 +725,7 @@ continueBtn.addEventListener("click", async () => {
 
     String(plan.plan_id) === productId &&
 
-    String(plan.network).toUpperCase() === selectedNetwork
+    normalizeNetwork(plan.network) === selectedNetwork
 
   );
 
