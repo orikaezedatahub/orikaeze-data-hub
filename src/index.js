@@ -137,10 +137,13 @@ async function processPaidOrder(env, reference) {
   );
   const payment = await verification.json();
 
-  if (!verification.ok || !payment.status ||
-      payment.data?.status !== "success" ||
+  if (!verification.ok || !payment.status) {
+    throw new Error("Paystack verification service is temporarily unavailable.");
+  }
+
+  if (payment.data?.status !== "success" ||
       payment.data?.currency !== "NGN" ||
-      payment.data?.amount !== order.amount ||
+      Number(payment.data?.amount) !== Number(order.amount) ||
       payment.data?.reference !== reference) {
     return {
       success: false,
