@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment status | Orikaeze Data Hub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:24px;background:#f3f8f4;color:#173126;font-family:Arial,sans-serif;min-height:100vh;display:grid;place-items:center}
+.card{width:100%;max-width:480px;background:#fff;padding:30px 24px;border:1px solid #e1ebe3;border-radius:16px;box-shadow:0 12px 35px #123c2010;text-align:center}
+.mark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;background:#eaf6ef;color:#087c50;font-size:26px;font-weight:bold}
+h1{font-size:24px;margin:8px 0 12px}
+p{font-size:14px;line-height:1.6;color:#65746b}
+#status{font-weight:bold;color:#07583e;overflow-wrap:anywhere}
+a{display:inline-block;margin-top:18px;padding:12px 18px;border-radius:8px;background:#07583e;color:white;text-decoration:none;font-weight:bold;font-size:13px}
+small{display:block;margin-top:18px;color:#7a8980;line-height:1.5}
+</style>
+</head>
+<body>
+<main class="card">
+<div class="mark" id="mark">…</div>
+<h1 id="heading">Checking your payment</h1>
+<p id="status">Please wait while we confirm your payment and service delivery. Do not make another payment.</p>
+<a href="index.html">Return to Orikaeze Data Hub</a>
+<small id="reference"></small>
+</main>
+<script>
+const API = "https://orikaeze-data-hub.eruakennethnnabuike.workers.dev";
+const params = new URLSearchParams(window.location.search);
+const reference = params.get("reference") || params.get("trxref") || "";
+const heading = document.getElementById("heading");
+const statusText = document.getElementById("status");
+const mark = document.getElementById("mark");
+document.getElementById("reference").textContent = reference ? "Reference: " + reference : "";
+
+function show(title, message, icon) {
+  heading.textContent = title;
+  statusText.textContent = message;
+  mark.textContent = icon;
+}
+
+async function checkOrder() {
+  const response = await fetch(API + "/api/order-status?reference=" + encodeURIComponent(reference));
+  const result = await response.json();
+  if (!response.ok || !result.success) throw new Error(result.message || "Could not retrieve order status.");
+  return result.order;
+}
+
+async function run() {
+  if (!reference) {
+    show("Reference missing", "We could not find a payment reference. If money was debited, contact support with your Paystack receipt. Do not pay again.", "!");
+    return;
+  }
+
+  try {
+    const verifyResponse = await fetch(API + "/api/verify-payment", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({reference})
+    });
+    const verification = await verifyResponse.json();
+
+    if (verification.delivery_status === "delivered" || verification.success) {
+      show("Payment successful", "Your payment has been confirmed and your service has been delivered.", "✓");
+      return;
+    }
+
+    if (verification.delivery_status === "pending_review") {
+      show("Payment received", "Your payment was received, but delivery needs a manual check. Please do not pay again.", "!");
+      return;
+    }
+
+    for (let attempt = 0; attempt < 12; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      const order = await checkOrder();
+
+      if (order.delivery_status === "delivered") {
+        show("Payment successful", "Your payment has been confirmed and your service has been delivered.", "✓");
+        return;
+      }
+
+      if (order.delivery_status === "pending_review") {
+        show("Payment received", "Your payment was received, but delivery needs a manual check. Please do not pay again.", "!");
+        return;
+      }
+
+      if (order.payment_status === "pending" && attempt === 11) {
+        show("Payment not confirmed yet", "Paystack has not confirmed this payment yet. If you completed a transfer, allow time for confirmation and check again. Do not pay twice.", "…");
+      }
+    }
+  } catch (error) {
+    show("Checking is taking longer", "We could not confirm the final status right now. If you were debited, do not pay again. Keep your payment receipt and contact support.", "!");
+  }
+}
+run();
+</script>
+</body>
+</html>
