@@ -136,6 +136,38 @@ select {
   color: #07583e;
 }
 
+/* NETWORK BRAND COLOURS */
+.networks button[data-network="MTN"] {
+  background: #FFCB05;
+  border-color: #FFCB05;
+  color: #111111;
+}
+
+.networks button[data-network="AIRTEL"] {
+  background: #E31E25;
+  border-color: #E31E25;
+  color: #FFFFFF;
+}
+
+.networks button[data-network="GLO"] {
+  background: #00A859;
+  border-color: #00A859;
+  color: #FFFFFF;
+}
+
+.networks button[data-network="9MOBILE"] {
+  background: #A8CF38;
+  border-color: #A8CF38;
+  color: #172B23;
+}
+
+/* Keep the network's brand colour visible when selected. */
+.networks button.selected {
+  border: 3px solid #172B23;
+  padding: 11px 3px;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #172B23;
+}
+
 /* DATA VALIDITY FILTERS */
 
 .plan-filters {
