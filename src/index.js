@@ -270,6 +270,7 @@ async function processPaidOrder(env, reference) {
 async function hashText(v){const x=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));return [...new Uint8Array(x)].map(b=>b.toString(16).padStart(2,"0")).join("")}
 function issueToken(){return [...crypto.getRandomValues(new Uint8Array(32))].map(b=>b.toString(16).padStart(2,"0")).join("")}
 async function securePassword(v,s){const salt=s?Uint8Array.from(s.match(/.{2}/g),x=>parseInt(x,16)):crypto.getRandomValues(new Uint8Array(16));const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(v),"PBKDF2",false,["deriveBits"]);const b=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:100000,hash:"SHA-256"},k,256);return{salt:[...salt].map(x=>x.toString(16).padStart(2,"0")).join(""),hash:[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}}
+async function adminSession(req,env){const a=req.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";if(t.length!==64)return false;const row=await env.DB.prepare("SELECT token_hash FROM admin_sessions WHERE token_hash=? AND expires_at>CURRENT_TIMESTAMP").bind(await hashText(t)).first();return !!row}
 async function sessionUser(req,env){const a=req.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";if(t.length!==64)return null;return env.DB.prepare("SELECT c.id,c.full_name,c.email,c.phone FROM auth_sessions s JOIN customers c ON c.id=s.user_id WHERE s.token_hash=? AND s.expires_at>CURRENT_TIMESTAMP").bind(await hashText(t)).first()}
 async function settleWalletTopup(env,ref){const t=await env.DB.prepare("SELECT * FROM wallet_topups WHERE reference=?").bind(ref).first();if(!t)return{success:false,status:404,message:"Deposit not found."};if(t.status==="credited")return{success:true,message:"Wallet already credited."};if(t.status!=="pending")return{success:false,status:409,message:"This wallet funding is not awaiting settlement."};const r=await paystack(env,"/transaction/verify/"+encodeURIComponent(ref)),v=await r.json();if(!r.ok||!v.status)throw Error("Paystack verification unavailable");if(v.data?.status!=="success")throw Error("Payment not confirmed");if(v.data?.currency!=="NGN"||Number(v.data?.amount)!==t.amount_kobo||v.data?.reference!==ref)return{success:false,status:400,message:"Payment details do not match."};await env.DB.batch([env.DB.prepare("UPDATE wallet_topups SET status='settling',updated_at=CURRENT_TIMESTAMP WHERE reference=? AND status='pending'").bind(ref),env.DB.prepare("UPDATE wallets SET balance_kobo=balance_kobo+?,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND EXISTS(SELECT 1 FROM wallet_topups WHERE reference=? AND status='settling') AND NOT EXISTS(SELECT 1 FROM wallet_ledger WHERE reference=?)").bind(t.amount_kobo,t.user_id,ref,ref),env.DB.prepare("INSERT INTO wallet_ledger(user_id,reference,type,amount_kobo,description,status) SELECT ?,?,'credit',?,'Wallet funding via Paystack','success' WHERE EXISTS(SELECT 1 FROM wallet_topups WHERE reference=? AND status='settling') AND NOT EXISTS(SELECT 1 FROM wallet_ledger WHERE reference=?)").bind(t.user_id,ref,t.amount_kobo,ref,ref),env.DB.prepare("UPDATE wallet_topups SET status='credited',updated_at=CURRENT_TIMESTAMP WHERE reference=? AND status='settling'").bind(ref)]);const settled=await env.DB.prepare("SELECT status FROM wallet_topups WHERE reference=?").bind(ref).first();if(settled?.status!=="credited")throw Error("Wallet funding settlement did not complete.");return{success:true,message:"Wallet funded successfully."}}
 async function refundWalletPurchase(env,p,detail){const ref="REF_"+p.reference;await env.DB.batch([env.DB.prepare("UPDATE wallets SET balance_kobo=balance_kobo+?,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND NOT EXISTS(SELECT 1 FROM wallet_ledger WHERE reference=?)").bind(p.amount_kobo,p.user_id,ref),env.DB.prepare("INSERT INTO wallet_ledger(user_id,reference,type,amount_kobo,description,status) SELECT ?,?,'credit',?,'Refund for failed purchase','success' WHERE NOT EXISTS(SELECT 1 FROM wallet_ledger WHERE reference=?)").bind(p.user_id,ref,p.amount_kobo,ref),env.DB.prepare("UPDATE wallet_orders SET status='refunded',provider_response=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(String(detail).slice(0,3000),p.reference),env.DB.prepare("UPDATE wallet_ledger SET status='refunded' WHERE reference=?").bind(p.reference)])}
@@ -396,6 +397,54 @@ export default {
 
 
     if (!env.DB) return reply({success:false,message:"Database is not configured."},503);
+    // Private founder administration. Requires ADMIN_EMAIL and ADMIN_PASSWORD Worker secrets/variables.
+    if (url.pathname.startsWith("/api/admin/")) {
+      if (url.pathname === "/api/admin/login" && request.method === "POST") {
+        let b; try { b = await request.json(); } catch { return reply({success:false,message:"Invalid request."},400); }
+        const configuredEmail = clean(env.ADMIN_EMAIL).toLowerCase();
+        const configuredPassword = String(env.ADMIN_PASSWORD || "");
+        const suppliedEmail = clean(b.email).toLowerCase();
+        const suppliedPassword = String(b.password || "");
+        if (!configuredEmail || configuredPassword.length < 12) return reply({success:false,message:"Admin access has not been configured."},503);
+        if (!constantTimeEqual(suppliedEmail,configuredEmail) || !constantTimeEqual(suppliedPassword,configuredPassword)) return reply({success:false,message:"Invalid administrator credentials."},401);
+        const token = issueToken();
+        await env.DB.prepare("INSERT INTO admin_sessions(token_hash,expires_at) VALUES(?,datetime('now','+12 hours'))").bind(await hashText(token)).run();
+        return reply({success:true,token,expires_in:43200});
+      }
+      if (url.pathname === "/api/admin/logout" && request.method === "POST") {
+        const a=request.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";
+        if(t.length===64) await env.DB.prepare("DELETE FROM admin_sessions WHERE token_hash=?").bind(await hashText(t)).run();
+        return reply({success:true});
+      }
+      if (!(await adminSession(request,env))) return reply({success:false,message:"Administrator login required."},401);
+      if (url.pathname === "/api/admin/me" && request.method === "GET") return reply({success:true,admin:{email:clean(env.ADMIN_EMAIL)}});
+      if (url.pathname === "/api/admin/overview" && request.method === "GET") {
+        const [customers,orders,paid,delivered,review,wallets,topups] = await Promise.all([
+          env.DB.prepare("SELECT COUNT(*) AS total FROM customers").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total FROM orders").first(),
+          env.DB.prepare("SELECT COALESCE(SUM(amount),0) AS total FROM orders WHERE payment_status='success'").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total FROM orders WHERE delivery_status='delivered'").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total FROM orders WHERE delivery_status='pending_review'").first(),
+          env.DB.prepare("SELECT COALESCE(SUM(balance_kobo),0) AS total FROM wallets").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total,COALESCE(SUM(amount_kobo),0) AS amount FROM wallet_topups WHERE status='credited'").first()
+        ]);
+        return reply({success:true,stats:{customers:customers.total,orders:orders.total,paid_kobo:paid.total,delivered:delivered.total,pending_review:review.total,wallet_balance_kobo:wallets.total,credited_topups:topups.total,topups_kobo:topups.amount}});
+      }
+      if (url.pathname === "/api/admin/customers" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT c.id,c.full_name,c.email,c.phone,c.created_at,COALESCE(w.balance_kobo,0) AS balance_kobo FROM customers c LEFT JOIN wallets w ON w.user_id=c.id ORDER BY c.created_at DESC LIMIT 200").all();
+        return reply({success:true,customers:rows.results||[]});
+      }
+      if (url.pathname === "/api/admin/orders" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT reference,email,phone,service,network,amount,payment_status,delivery_status,created_at FROM orders ORDER BY created_at DESC LIMIT 200").all();
+        return reply({success:true,orders:rows.results||[]});
+      }
+      if (url.pathname === "/api/admin/wallet-activity" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT l.reference,c.full_name,c.email,l.type,l.amount_kobo,l.description,l.status,l.created_at FROM wallet_ledger l JOIN customers c ON c.id=l.user_id ORDER BY l.id DESC LIMIT 200").all();
+        return reply({success:true,activity:rows.results||[]});
+      }
+      return reply({success:false,message:"Admin route not found."},404);
+    }
+
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       let b;
       try {
