@@ -6,6 +6,12 @@
 <title>Orikaeze Hub | Digital Services</title>
 <meta name="description" content="Buy mobile data and airtime with ORIKAEZE HUB. Explore convenient digital services from Orikaeze Media.">
 <meta name="theme-color" content="#07583e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ORIKAEZE HUB">
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -205,5 +211,14 @@ footer strong{letter-spacing:.5px;color:var(--hub-green)}
 <small>Cable TV and Education pages are being prepared. Purchases will open after provider API integration and testing.</small>
 </footer>
 
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch((error) => {
+      console.warn("ORIKAEZE HUB app setup:", error);
+    });
+  });
+}
+</script>
 </body>
 </html>
