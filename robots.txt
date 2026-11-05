@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://orikaezedatahub.github.io/orikaeze-data-hub/sitemap.xml
