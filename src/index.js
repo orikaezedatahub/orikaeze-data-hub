@@ -468,35 +468,47 @@ export default {
       }
     }
 
-    if (!env.DB || !env.PAYSTACK_SECRET_KEY || !env.MELE_SECRET_KEY) {
-      return reply({
-        success: false,
-        message: "Backend configuration is incomplete."
-      }, 503);
-    }
-
     if (url.pathname === "/api/plans" && request.method === "GET") {
+      if (!env.MELE_SECRET_KEY) {
+        return reply({ success: false, message: "Data provider is not configured." }, 503);
+      }
       try {
         const response = await mele(env, "/data/plans");
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          console.error("MELE plans endpoint returned non-JSON response:", response.status);
+          return reply({ success: false, message: "Data provider returned an invalid response." }, 502);
+        }
 
         if (!response.ok) {
+          console.error("MELE plans request failed:", response.status, result?.message || "No provider message");
           return reply({
             success: false,
-            message: "Could not retrieve data plans."
+            message: "Could not retrieve data plans from the provider."
           }, 502);
         }
 
+        const plans = extractPlans(result);
         return reply({
           success: true,
-          plans: extractPlans(result).map(plan => ({ ...plan, network: normalizeNetwork(plan.network) }))
+          plans: plans.map(plan => ({ ...plan, network: normalizeNetwork(plan.network) }))
         });
-      } catch {
+      } catch (error) {
+        console.error("MELE plans request error:", error);
         return reply({
           success: false,
           message: "Data plans are temporarily unavailable."
         }, 502);
       }
+    }
+
+    if (!env.DB || !env.PAYSTACK_SECRET_KEY || !env.MELE_SECRET_KEY) {
+      return reply({
+        success: false,
+        message: "Backend configuration is incomplete."
+      }, 503);
     }
 
     if (url.pathname === "/api/initialize-payment" &&
