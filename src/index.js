@@ -355,6 +355,43 @@ export default {
     }
 
 
+    if (url.pathname === "/api/plans" && request.method === "GET") {
+      if (!env.MELE_SECRET_KEY) {
+        return reply({ success: false, message: "Data provider is not configured." }, 503);
+      }
+      try {
+        const response = await mele(env, "/data/plans");
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          console.error("MELE plans endpoint returned non-JSON response:", response.status);
+          return reply({ success: false, message: "Data provider returned an invalid response." }, 502);
+        }
+
+        if (!response.ok) {
+          console.error("MELE plans request failed:", response.status, result?.message || "No provider message");
+          return reply({
+            success: false,
+            message: "Could not retrieve data plans from the provider."
+          }, 502);
+        }
+
+        const plans = extractPlans(result);
+        return reply({
+          success: true,
+          plans: plans.map(plan => ({ ...plan, network: normalizeNetwork(plan.network) }))
+        });
+      } catch (error) {
+        console.error("MELE plans request error:", error);
+        return reply({
+          success: false,
+          message: "Data plans are temporarily unavailable."
+        }, 502);
+      }
+    }
+
+
     if (!env.DB) return reply({success:false,message:"Database is not configured."},503);
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       let b;
@@ -465,42 +502,6 @@ export default {
         if(pr.ok&&(d.data?.status==="success"||d.data?.status==="delivered")){await env.DB.batch([env.DB.prepare("UPDATE wallet_orders SET status='delivered',provider_reference=?,provider_response=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(pref,JSON.stringify(d).slice(0,3000),ref),env.DB.prepare("UPDATE wallet_ledger SET status='success' WHERE reference=?").bind(ref)]);return reply({success:true,reference:ref,message:"Purchase successful and delivered."})}
         if(pr.status>=500||pr.status===408||pr.status===429){await env.DB.prepare("UPDATE wallet_orders SET status='pending_review',provider_reference=?,provider_response=? WHERE reference=?").bind(pref,JSON.stringify(d).slice(0,3000),ref).run();return reply({success:false,reference:ref,message:"Provider is still confirming. Do not purchase again."},202)}
         await refundWalletPurchase(env,{reference:ref,user_id:u.id,amount_kobo:amount},JSON.stringify(d));return reply({success:false,reference:ref,message:"Purchase failed. Amount returned to wallet."},502)
-      }
-    }
-
-    if (url.pathname === "/api/plans" && request.method === "GET") {
-      if (!env.MELE_SECRET_KEY) {
-        return reply({ success: false, message: "Data provider is not configured." }, 503);
-      }
-      try {
-        const response = await mele(env, "/data/plans");
-        let result;
-        try {
-          result = await response.json();
-        } catch {
-          console.error("MELE plans endpoint returned non-JSON response:", response.status);
-          return reply({ success: false, message: "Data provider returned an invalid response." }, 502);
-        }
-
-        if (!response.ok) {
-          console.error("MELE plans request failed:", response.status, result?.message || "No provider message");
-          return reply({
-            success: false,
-            message: "Could not retrieve data plans from the provider."
-          }, 502);
-        }
-
-        const plans = extractPlans(result);
-        return reply({
-          success: true,
-          plans: plans.map(plan => ({ ...plan, network: normalizeNetwork(plan.network) }))
-        });
-      } catch (error) {
-        console.error("MELE plans request error:", error);
-        return reply({
-          success: false,
-          message: "Data plans are temporarily unavailable."
-        }, 502);
       }
     }
 
