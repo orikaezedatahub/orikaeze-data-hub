@@ -1,5 +1,6 @@
 const MELE_BASE = "https://meledata.ng/api/v1/developer";
 const PAYSTACK_BASE = "https://api.paystack.co";
+const BUILD_VERSION = "2026-11-05.1";
 
 const json = (data, status = 200, origin = "*") =>
   new Response(JSON.stringify(data), {
@@ -275,6 +276,7 @@ async function refundWalletPurchase(env,p,detail){const ref="REF_"+p.reference;a
 
 export default {
   async fetch(request, env, ctx) {
+    try {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
     const allowedOrigin =
@@ -302,7 +304,8 @@ export default {
       return reply({
         success: true,
         service: "ORIKAEZE DATA HUB",
-        message: "Backend is running."
+        message: "Backend is running.",
+        build: BUILD_VERSION
       });
     }
 
@@ -714,5 +717,14 @@ export default {
       success: false,
       message: "Route not found."
     }, 404);
+    } catch (error) {
+      console.error("Unhandled Worker error:", error);
+      const origin = request.headers.get("Origin") || "";
+      const allowedOrigin = env.ALLOWED_ORIGIN || "https://orikaezedatahub.github.io";
+      return json({
+        success: false,
+        message: "The backend encountered an unexpected error."
+      }, 500, origin && origin === allowedOrigin ? allowedOrigin : allowedOrigin);
+    }
   }
 };
