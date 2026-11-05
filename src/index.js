@@ -356,13 +356,84 @@ export default {
 
 
     if (!env.DB) return reply({success:false,message:"Database is not configured."},503);
-    if(url.pathname==="/api/auth/register"&&request.method==="POST"){
-      let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
-      const name=clean(b.fullName),email=clean(b.email).toLowerCase(),phone=clean(b.phone),password=String(b.password||"");
-      if(name.length<2||name.length>80||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!validPhone(phone)||password.length<10||password.length>128)return reply({success:false,message:"Enter your name, valid email and phone, and a password of at least 10 characters."},400);
-      if(await env.DB.prepare("SELECT id FROM customers WHERE email=?").bind(email).first())return reply({success:false,message:"Email already registered. Please log in."},409);
-      const id=crypto.randomUUID(),p=await securePassword(password),token=issueToken();
-      try{await env.DB.batch([env.DB.prepare("INSERT INTO customers(id,full_name,email,phone,password_hash,password_salt) VALUES(?,?,?,?,?,?)").bind(id,name,email,phone,p.hash,p.salt),env.DB.prepare("INSERT INTO wallets(user_id,balance_kobo) VALUES(?,0)").bind(id),env.DB.prepare("INSERT INTO auth_sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now','+30 days'))").bind(id,await hashText(token))]);return reply({success:true,token,user:{id,full_name:name,email,phone}})}catch(e){console.error(e);return reply({success:false,message:"Could not create account. Email may already exist."},409)}
+    if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      let b;
+      try {
+        b = await request.json();
+      } catch {
+        return reply({ success: false, message: "Invalid request." }, 400);
+      }
+
+      const name = clean(b.fullName);
+      const email = clean(b.email).toLowerCase();
+      const phone = clean(b.phone);
+      const password = String(b.password || "");
+
+      if (
+        name.length < 2 ||
+        name.length > 80 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+        !validPhone(phone) ||
+        password.length < 10 ||
+        password.length > 128
+      ) {
+        return reply({
+          success: false,
+          message: "Enter your name, valid email and phone, and a password of at least 10 characters."
+        }, 400);
+      }
+
+      try {
+        // Keep every database operation inside this try block so D1 errors
+        // are returned with the configured CORS headers instead of becoming
+        // an opaque browser-level "Failed to fetch" response.
+        const existing = await env.DB.prepare(
+          "SELECT id FROM customers WHERE email = ?"
+        ).bind(email).first();
+
+        if (existing) {
+          return reply({
+            success: false,
+            message: "Email already registered. Please log in."
+          }, 409);
+        }
+
+        const id = crypto.randomUUID();
+        const passwordData = await securePassword(password);
+        const token = issueToken();
+        const tokenHash = await hashText(token);
+
+        await env.DB.batch([
+          env.DB.prepare(
+            "INSERT INTO customers(id,full_name,email,phone,password_hash,password_salt) VALUES(?,?,?,?,?,?)"
+          ).bind(id, name, email, phone, passwordData.hash, passwordData.salt),
+          env.DB.prepare(
+            "INSERT INTO wallets(user_id,balance_kobo) VALUES(?,0)"
+          ).bind(id),
+          env.DB.prepare(
+            "INSERT INTO auth_sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now','+30 days'))"
+          ).bind(id, tokenHash)
+        ]);
+
+        return reply({
+          success: true,
+          token,
+          user: { id, full_name: name, email, phone }
+        });
+      } catch (error) {
+        console.error("Customer registration failed:", error);
+        const message = String(error?.message || "").toLowerCase();
+        if (message.includes("unique") || message.includes("constraint")) {
+          return reply({
+            success: false,
+            message: "Email already registered. Please log in."
+          }, 409);
+        }
+        return reply({
+          success: false,
+          message: "Registration could not be completed. Please try again."
+        }, 500);
+      }
     }
     if(url.pathname==="/api/auth/login"&&request.method==="POST"){
       let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
