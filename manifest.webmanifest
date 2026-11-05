@@ -1,0 +1,46 @@
+{
+  "id": "./",
+  "name": "ORIKAEZE HUB",
+  "short_name": "ORIKAEZE HUB",
+  "description": "Fast, affordable and reliable digital services.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f8f4",
+  "theme_color": "#07583e",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Buy Data",
+      "short_name": "Data",
+      "url": "data.html",
+      "icons": [
+        {
+          "src": "icons/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Buy Airtime",
+      "short_name": "Airtime",
+      "url": "airtime.html",
+      "icons": [
+        {
+          "src": "icons/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
