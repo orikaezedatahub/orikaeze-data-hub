@@ -733,7 +733,7 @@ function showPlans() {
       const planName = plan.plan_name || plan.data_size || "Data bundle";
 
       option.textContent =
-        `${planName} (${category.label}) — ₦${Number(plan.price).toLocaleString("en-NG")}`;
+        `${planName} (${category.label}) — ₦${Number(plan.customer_price ?? plan.price).toLocaleString("en-NG")}`;
 
       group.appendChild(option);
 
