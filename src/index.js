@@ -457,6 +457,63 @@ export default {
         const rows=await env.DB.prepare("SELECT c.id,c.full_name,c.email,c.phone,c.created_at,COALESCE(w.balance_kobo,0) AS balance_kobo FROM customers c LEFT JOIN wallets w ON w.user_id=c.id ORDER BY c.created_at DESC LIMIT 200").all();
         return reply({success:true,customers:rows.results||[]});
       }
+      if (url.pathname === "/api/admin/retry-order" && request.method === "POST") {
+        let body;
+        try { body = await request.json(); } catch { return reply({success:false,message:"Invalid request."},400); }
+        const reference = clean(body.reference);
+        if (!reference) return reply({success:false,message:"Order reference is required."},400);
+
+        const order = await env.DB.prepare("SELECT * FROM orders WHERE reference = ?").bind(reference).first();
+        if (!order) return reply({success:false,message:"Order not found."},404);
+        if (order.payment_status !== "success") return reply({success:false,message:"Only paid orders can be retried."},409);
+        if (order.delivery_status === "delivered") return reply({success:false,message:"This order is already delivered."},409);
+
+        let previous = {};
+        try { previous = JSON.parse(order.provider_response || "{}"); } catch {}
+        if (previous.data?.status !== "failed") {
+          return reply({success:false,message:"The last provider result is not a confirmed failure. Manual retry is blocked to prevent duplicate delivery."},409);
+        }
+
+        const previousRef = String(order.provider_reference || ("ODH_" + reference));
+        const retryMatch = previousRef.match(/-R(\\d+)$/);
+        const retryCount = retryMatch ? Number(retryMatch[1]) : 0;
+        if (retryCount >= 2) return reply({success:false,message:"This order has reached its two safe retry attempts. Please review it manually."},409);
+
+        const retryReference = previousRef.replace(/-R\\d+$/, "") + "-R" + (retryCount + 1);
+        const lock = await env.DB.prepare(
+          "UPDATE orders SET delivery_status='processing',updated_at=CURRENT_TIMESTAMP WHERE reference=? AND payment_status='success' AND delivery_status='pending_review'"
+        ).bind(reference).run();
+        if (!lock.meta.changes) return reply({success:false,message:"This order is already being processed. Refresh the order list shortly."},409);
+
+        try {
+          const purchaseResponse = order.service === "data"
+            ? await mele(env, "/data/purchase", {method:"POST",body:{
+                network:order.network,phone_number:order.phone,plan_id:Number(order.product_id),reference:retryReference
+              }})
+            : await mele(env, "/airtime/purchase", {method:"POST",body:{
+                network:order.network,phone_number:order.phone,amount:Number(order.product_id),reference:retryReference
+              }});
+          let delivery = {};
+          try { delivery = await purchaseResponse.json(); } catch {}
+          const delivered = purchaseResponse.ok &&
+            (delivery.data?.status === "success" || delivery.data?.status === "delivered");
+          await env.DB.prepare(
+            "UPDATE orders SET provider_reference=?,provider_response=?,delivery_status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?"
+          ).bind(retryReference,JSON.stringify(delivery).slice(0,5000),delivered?"delivered":"pending_review",reference).run();
+          return reply({
+            success:delivered,
+            reference,
+            provider_reference:retryReference,
+            delivery_status:delivered?"delivered":"pending_review",
+            message:delivered?"Retry successful. Service delivered.":"MELE did not confirm delivery. The order remains under review."
+          });
+        } catch (error) {
+          await env.DB.prepare(
+            "UPDATE orders SET provider_reference=?,provider_response=?,delivery_status='pending_review',updated_at=CURRENT_TIMESTAMP WHERE reference=?"
+          ).bind(retryReference,JSON.stringify({status:false,message:String(error?.message || "Provider request failed.")}).slice(0,5000),reference).run();
+          return reply({success:false,message:"The retry could not be confirmed. The order remains under review; do not retry again immediately."},502);
+        }
+      }
       if (url.pathname === "/api/admin/orders" && request.method === "GET") {
         const rows=await env.DB.prepare("SELECT reference,email,phone,service,network,amount,payment_status,delivery_status,provider_reference,provider_response,created_at FROM orders ORDER BY created_at DESC LIMIT 200").all();
         return reply({success:true,orders:rows.results||[]});
