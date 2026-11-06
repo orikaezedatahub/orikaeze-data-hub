@@ -458,7 +458,7 @@ export default {
         return reply({success:true,customers:rows.results||[]});
       }
       if (url.pathname === "/api/admin/orders" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT reference,email,phone,service,network,amount,payment_status,delivery_status,created_at FROM orders ORDER BY created_at DESC LIMIT 200").all();
+        const rows=await env.DB.prepare("SELECT reference,email,phone,service,network,amount,payment_status,delivery_status,provider_reference,provider_response,created_at FROM orders ORDER BY created_at DESC LIMIT 200").all();
         return reply({success:true,orders:rows.results||[]});
       }
       if (url.pathname === "/api/admin/wallet-activity" && request.method === "GET") {
