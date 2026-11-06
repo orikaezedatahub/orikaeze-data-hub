@@ -143,6 +143,7 @@ footer strong{letter-spacing:.5px;color:var(--hub-green)}
 
 <label for="amount">Airtime amount (₦)</label>
 <input id="amount" type="number" min="100" max="100000" step="1" placeholder="Enter amount">
+<p id="pricePreview" style="font-size:13px;color:#07583e;font-weight:bold;margin-top:9px" aria-live="polite">Enter an amount to see your total.</p>
 
 <button class="continue" id="continueBtn" type="button">
 Continue to payment
@@ -170,7 +171,28 @@ const buttons = document.querySelectorAll(".networks button");
 const emailInput = document.getElementById("email");
 const phoneInput = document.getElementById("phone");
 const amountInput = document.getElementById("amount");
+const pricePreview = document.getElementById("pricePreview");
 const continueBtn = document.getElementById("continueBtn");
+
+function getMarkup(amount) {
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 500) return 10;
+  if (amount < 1500) return 20;
+  return 30;
+}
+
+function updatePricePreview() {
+  const amount = Number(amountInput.value);
+  if (!Number.isInteger(amount) || amount < 100 || amount > 100000) {
+    pricePreview.textContent = "Enter an amount to see your total.";
+    return;
+  }
+  const markup = getMarkup(amount);
+  const total = amount + markup;
+  pricePreview.textContent = `You will pay ₦${total.toLocaleString("en-NG")} (includes ₦${markup} service margin).`;
+}
+
+amountInput.addEventListener("input", updatePricePreview);
 const message = document.getElementById("message");
 
 let selectedNetwork = "MTN";
