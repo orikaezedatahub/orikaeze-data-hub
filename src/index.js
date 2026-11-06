@@ -42,6 +42,20 @@ const validPhone = value => /^0[789][01]\d{8}$/.test(value);
 
 const money = value => Math.round(Number(value) * 100);
 
+// ORIKAEZE HUB tiered selling margin (NGN), applied server-side.
+// Provider cost below ₦500: ₦10; ₦500–₦1,499: ₦20; ₦1,500 and above: ₦30.
+function getMarkup(providerCost) {
+  const cost = Number(providerCost);
+  if (!Number.isFinite(cost) || cost <= 0) return 0;
+  if (cost < 500) return 10;
+  if (cost < 1500) return 20;
+  return 30;
+}
+
+function getSellingPrice(providerCost) {
+  return Math.ceil(Number(providerCost) + getMarkup(providerCost));
+}
+
 async function mele(env, path, options = {}) {
   return fetch(MELE_BASE + path, {
     method: options.method || "GET",
@@ -384,7 +398,16 @@ export default {
         const plans = extractPlans(result);
         return reply({
           success: true,
-          plans: plans.map(plan => ({ ...plan, network: normalizeNetwork(plan.network) }))
+          plans: plans.map(plan => {
+            const providerCost = Number(plan.price);
+            return {
+              ...plan,
+              network: normalizeNetwork(plan.network),
+              provider_price: providerCost,
+              markup: getMarkup(providerCost),
+              customer_price: getSellingPrice(providerCost)
+            };
+          })
         });
       } catch (error) {
         console.error("MELE plans request error:", error);
@@ -547,7 +570,7 @@ export default {
         const service=clean(b.service).toLowerCase(),network=normalizeNetwork(b.network),phone=clean(b.phone),product=clean(b.productId),face=Number(b.amount);if(!validPhone(phone)||!["data","airtime"].includes(service)||!["MTN","GLO","AIRTEL","9MOBILE"].includes(network))return reply({success:false,message:"Check service, network and phone number."},400);
         try{await getLiveStatus(env)}catch{return reply({success:false,message:"Live delivery is unavailable."},503)}
         let cost,plan=null;if(service==="data"){const r=await mele(env,"/data/plans"),d=await r.json(),p=extractPlans(d).find(x=>String(x.plan_id)===product&&normalizeNetwork(x.network)===network);if(!r.ok||!p)return reply({success:false,message:"Selected plan unavailable."},400);cost=Number(p.price);plan=p.plan_id}else{if(!Number.isInteger(face)||face<100||face>100000)return reply({success:false,message:"Airtime must be ₦100–₦100,000."},400);cost=face}
-        if(!Number.isFinite(cost)||cost<=0)return reply({success:false,message:"Invalid product price."},400);const customerPrice=Math.ceil(cost+Math.max(0,Number(env.PROFIT_NAIRA||0)));if(!Number.isFinite(customerPrice)||customerPrice<=0)return reply({success:false,message:"Invalid product price."},400);const amount=money(customerPrice),ref="WPO_"+crypto.randomUUID().replace(/-/g,"");
+        if(!Number.isFinite(cost)||cost<=0)return reply({success:false,message:"Invalid product price."},400);const customerPrice=getSellingPrice(cost);if(!Number.isFinite(customerPrice)||customerPrice<=0)return reply({success:false,message:"Invalid product price."},400);const amount=money(customerPrice),ref="WPO_"+crypto.randomUUID().replace(/-/g,"");
         const tx=await env.DB.batch([env.DB.prepare("INSERT INTO wallet_orders(reference,user_id,service,network,phone,product_id,amount_kobo,status) SELECT ?,?,?,?,?,?,?,'processing' WHERE EXISTS(SELECT 1 FROM wallets WHERE user_id=? AND balance_kobo>=?)").bind(ref,u.id,service,network,phone,plan===null?String(face):String(plan),amount,u.id,amount),env.DB.prepare("UPDATE wallets SET balance_kobo=balance_kobo-?,updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND balance_kobo>=? AND EXISTS(SELECT 1 FROM wallet_orders WHERE reference=?)").bind(amount,u.id,amount,ref),env.DB.prepare("INSERT INTO wallet_ledger(user_id,reference,type,amount_kobo,description,status) SELECT ?,?,'debit',?,?,'pending' WHERE EXISTS(SELECT 1 FROM wallet_orders WHERE reference=?)").bind(u.id,ref,amount,service+" purchase",ref)]);
         if(!tx[0].meta.changes)return reply({success:false,message:"Insufficient wallet balance. Please fund your wallet."},400);
         const pref="ODH_"+ref;let pr,d={};try{pr=service==="data"?await mele(env,"/data/purchase",{method:"POST",body:{network,phone_number:phone,plan_id:Number(plan),reference:pref}}):await mele(env,"/airtime/purchase",{method:"POST",body:{network,phone_number:phone,amount:face,reference:pref}});try{d=await pr.json()}catch{}}catch{await env.DB.prepare("UPDATE wallet_orders SET status='pending_review',provider_reference=? WHERE reference=?").bind(pref,ref).run();return reply({success:false,reference:ref,message:"Provider response pending. Do not buy again; contact support if it does not update."},202)}
@@ -634,8 +657,8 @@ export default {
         providerCost = faceValue;
       }
 
-      const markup = Math.max(0, Number(env.PROFIT_NAIRA || 0));
-      const customerAmount = Math.ceil(providerCost + markup);
+      const markup = getMarkup(providerCost);
+      const customerAmount = getSellingPrice(providerCost);
 
       if (!Number.isFinite(customerAmount) || customerAmount < 100) {
         return reply({
