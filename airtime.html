@@ -174,22 +174,13 @@ const amountInput = document.getElementById("amount");
 const pricePreview = document.getElementById("pricePreview");
 const continueBtn = document.getElementById("continueBtn");
 
-function getMarkup(amount) {
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
-  if (amount < 500) return 10;
-  if (amount < 1500) return 20;
-  return 30;
-}
-
 function updatePricePreview() {
   const amount = Number(amountInput.value);
   if (!Number.isInteger(amount) || amount < 100 || amount > 100000) {
     pricePreview.textContent = "Enter an amount to see your total.";
     return;
   }
-  const markup = getMarkup(amount);
-  const total = amount + markup;
-  pricePreview.textContent = `You will pay ₦${total.toLocaleString("en-NG")} (includes ₦${markup} service margin).`;
+  pricePreview.textContent = `You will pay exactly ₦${amount.toLocaleString("en-NG")}.`;
 }
 
 amountInput.addEventListener("input", updatePricePreview);
