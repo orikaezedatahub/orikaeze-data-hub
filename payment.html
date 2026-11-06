@@ -81,53 +81,52 @@ async function run() {
     return;
   }
 
-  try {
-    const verifyResponse = await fetch(API + "/api/verify-payment", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({reference})
-    });
-    const verification = await verifyResponse.json();
+  // Keep reconciling while this page is open. The backend verifies Paystack
+  // and retries MELE with the same idempotency reference when needed.
+  for (let attempt = 0; attempt < 24; attempt++) {
+    try {
+      const verifyResponse = await fetch(API + "/api/verify-payment", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({reference})
+      });
+      const verification = await verifyResponse.json();
 
-    if (verification.delivery_status === "delivered" || verification.success) {
-      show("Payment successful", "Your payment has been confirmed and your service has been delivered.", "✓");
-      return;
-    }
+      if (verification.delivery_status === "delivered" || verification.success) {
+        show("Payment successful", "Your payment has been confirmed and your service has been delivered.", "✓");
+        return;
+      }
 
-    if (verification.delivery_status === "pending_review") {
-      show("Payment received", "Your payment was received, but delivery needs a manual check. Please do not pay again.", "!");
-      return;
-    }
-
-    let latestOrder = null;
-    for (let attempt = 0; attempt < 12; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      latestOrder = await checkOrder();
-
+      const latestOrder = await checkOrder();
       if (latestOrder.delivery_status === "delivered") {
         show("Payment successful", "Your payment has been confirmed and your service has been delivered.", "✓");
         return;
       }
 
-      if (latestOrder.delivery_status === "pending_review") {
-        show("Payment received", "Your payment was received, but delivery needs a manual check. Please do not pay again.", "!");
-        return;
+      if (latestOrder.payment_status === "pending" &&
+          verification.delivery_status !== "pending_review") {
+        show("Confirming payment", "We are waiting for Paystack to confirm your payment. Please do not pay again.", "…");
+      } else {
+        show("Completing your order", "Payment received. We are checking and completing your airtime or data delivery. Please do not pay again.", "…");
       }
-
-      if (latestOrder.delivery_status === "processing" && attempt === 11) {
-        show("Payment received", "Your payment is confirmed and your service is still being processed. Please do not pay again. Check this page again shortly.", "…");
-      }
+    } catch (error) {
+      show("Still checking your order", "Please keep this page open. We are verifying your payment and delivery. Do not pay again.", "…");
     }
 
-    if (latestOrder?.payment_status === "pending") {
-      show("Payment not confirmed yet", "Paystack has not confirmed this payment yet. If you completed a transfer, allow time for confirmation and check again. Do not pay twice.", "…");
-    } else if (latestOrder?.payment_status === "success" &&
-               latestOrder?.delivery_status !== "delivered" &&
-               latestOrder?.delivery_status !== "pending_review") {
-      show("Payment received", "Your payment is confirmed, but delivery is not yet complete. Please do not pay again. Check this page again shortly.", "…");
+    if (attempt < 23) await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+
+  try {
+    const latestOrder = await checkOrder();
+    if (latestOrder.delivery_status === "delivered") {
+      show("Payment successful", "Your payment has been confirmed and your service has been delivered.", "✓");
+    } else if (latestOrder.payment_status === "success") {
+      show("Payment received", "Your payment is confirmed. Delivery is still being reconciled automatically. Do not pay again; refresh this page shortly.", "…");
+    } else {
+      show("Payment confirmation pending", "We have not received final confirmation yet. If you were debited, do not pay again. Your transaction is being checked.", "…");
     }
-  } catch (error) {
-    show("Checking is taking longer", "We could not confirm the final status right now. If you were debited, do not pay again. Keep your payment receipt and contact support.", "!");
+  } catch {
+    show("Checking is taking longer", "We could not retrieve the latest status. If you were debited, do not pay again. Your transaction is being checked.", "!");
   }
 }
 run();
