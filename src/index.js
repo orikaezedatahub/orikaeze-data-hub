@@ -137,15 +137,10 @@ async function processPaidOrder(env, reference) {
     };
   }
 
-  if (order.delivery_status === "pending_review") {
-    return {
-      success: false,
-      message: "Payment was received but delivery needs review. Please do not pay again.",
-      reference,
-      delivery_status: "pending_review"
-    };
-  }
-
+  // pending_review orders may be safely reconciled by retrying the exact same
+  // MELE reference. MELE documents reference-based idempotency: a repeated
+  // reference returns the original transaction without a second debit.
+  
   const verification = await paystack(
     env,
     "/transaction/verify/" + encodeURIComponent(reference)
@@ -189,7 +184,7 @@ async function processPaidOrder(env, reference) {
     WHERE reference = ?
       AND (
         (payment_status IN ('pending', 'success')
-          AND delivery_status = 'pending')
+          AND delivery_status IN ('pending', 'pending_review'))
         OR
         (payment_status = 'success'
           AND delivery_status = 'processing'
@@ -360,8 +355,13 @@ export default {
         const result = await processPaidOrder(env,eventRef);
         // Missing orders can be a brief race/consistency issue. Ask Paystack
         // to retry rather than acknowledging and permanently dropping the event.
-        if (result.status === 404 || (result.status && result.status >= 500)) {
-          return reply({ success: false, message: "Payment event could not be processed yet." }, 500);
+        if (result.status === 404 ||
+            (result.status && result.status >= 500) ||
+            result.delivery_status === "pending_review" ||
+            result.delivery_status === "processing") {
+          // Ask Paystack to retry unresolved deliveries. The same MELE
+          // reference is reused, so retries are idempotent and cannot double-debit.
+          return reply({ success: false, message: "Payment confirmed; delivery is still being reconciled." }, 500);
         }
         return reply({ success: true, message: "Payment event processed." });
       } catch (error) {
