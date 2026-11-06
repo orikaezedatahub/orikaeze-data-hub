@@ -475,11 +475,11 @@ export default {
         }
 
         const previousRef = String(order.provider_reference || ("ODH_" + reference));
-        const retryMatch = previousRef.match(/-R(\\d+)$/);
+        const retryMatch = previousRef.match(/-R(\d+)$/);
         const retryCount = retryMatch ? Number(retryMatch[1]) : 0;
         if (retryCount >= 2) return reply({success:false,message:"This order has reached its two safe retry attempts. Please review it manually."},409);
 
-        const retryReference = previousRef.replace(/-R\\d+$/, "") + "-R" + (retryCount + 1);
+        const retryReference = previousRef.replace(/-R\d+$/, "") + "-R" + (retryCount + 1);
         const lock = await env.DB.prepare(
           "UPDATE orders SET delivery_status='processing',updated_at=CURRENT_TIMESTAMP WHERE reference=? AND payment_status='success' AND delivery_status='pending_review'"
         ).bind(reference).run();
