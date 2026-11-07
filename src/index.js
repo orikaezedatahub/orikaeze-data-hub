@@ -349,63 +349,6 @@ export default {
     const reply = (data, status = 200) =>
       json(data, status, responseOrigin);
 
-    // The site Preview Worker does not host the repository's static files.
-    // Serve a temporary login-test page there and send credentials only to the
-    // isolated API Preview Worker. This route is unavailable on Production.
-    if (
-      previewApiHost &&
-      url.pathname === "/admin.html" &&
-      request.method === "GET"
-    ) {
-      const page = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ORIKAEZE HUB Preview Admin Test</title>
-<style>
-body{font-family:Arial,sans-serif;background:#f3f7f4;color:#183126;margin:0;padding:24px}
-main{max-width:420px;margin:8vh auto;background:#fff;padding:24px;border-radius:14px;box-shadow:0 5px 24px #18312618}
-h1{font-size:22px}p{color:#617269;font-size:14px;line-height:1.5}
-label{display:block;margin:16px 0 6px;font-weight:bold;font-size:13px}
-input{width:100%;height:44px;box-sizing:border-box;padding:10px;border:1px solid #ccd9d0;border-radius:8px;font-size:16px}
-button{width:100%;margin-top:18px;padding:13px;background:#08764f;color:white;border:0;border-radius:8px;font-weight:bold;font-size:15px}
-#result{margin-top:16px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
-</style></head><body><main><h1>ORIKAEZE HUB — Preview Test</h1>
-<p>This page tests the separate Preview administrator login. It does not use your live Production account.</p>
-<form id="f"><label for="email">Preview admin email</label><input id="email" type="email" autocomplete="username" required>
-<label for="password">Preview admin password</label><input id="password" type="password" autocomplete="current-password" required>
-<button id="b" type="submit">Test Admin Login</button></form><div id="result" role="status"></div></main>
-<script>
-const API=location.origin;
-const form=document.getElementById("f"),button=document.getElementById("b"),result=document.getElementById("result");
-form.addEventListener("submit",async e=>{
- e.preventDefault();button.disabled=true;result.textContent="Checking Preview login…";
- let token="";
- try{
-  const login=await fetch(API+"/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("email").value,password:document.getElementById("password").value})});
-  const data=await login.json();
-  if(!login.ok||!data.success)throw new Error(data.message||"Login test failed.");
-  token=data.token;
-  const check=await fetch(API+"/api/admin/me",{headers:{Authorization:"Bearer "+token}});
-  const me=await check.json();
-  if(!check.ok||!me.success)throw new Error(me.message||"Session verification failed.");
-  await fetch(API+"/api/admin/logout",{method:"POST",headers:{Authorization:"Bearer "+token}});
-  token="";
-  result.textContent="SUCCESS: Preview admin login and session verification both passed. Test session closed.";
- }catch(err){result.textContent="TEST RESULT: "+err.message;}
- finally{if(token)try{await fetch(API+"/api/admin/logout",{method:"POST",headers:{Authorization:"Bearer "+token}})}catch{}button.disabled=false;}
-});
-</script></body></html>`;
-      return new Response(page, {
-        status: 200,
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "no-store",
-          "X-Content-Type-Options": "nosniff",
-          "X-Frame-Options": "DENY",
-          "Referrer-Policy": "no-referrer"
-        }
-      });
-    }
-
     if (url.pathname === "/" || url.pathname === "/api/health") {
       return reply({
         success: true,
@@ -516,22 +459,6 @@ form.addEventListener("submit",async e=>{
 
 
     if (!env.DB) return reply({success:false,message:"Database is not configured."},503);
-    // Temporary Preview-only customer authentication test page.
-    // It creates a synthetic customer in the isolated staging database only.
-    if (previewApiHost && url.pathname === "/__preview-customer-test.html" && request.method === "GET") {
-      const page = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>ORIKAEZE HUB Preview Customer Test</title><style>body{font:16px Arial,sans-serif;background:#f3f7f4;color:#183126;padding:24px}main{max-width:520px;margin:8vh auto;background:white;padding:24px;border-radius:14px}button{padding:13px 18px;background:#08764f;color:white;border:0;border-radius:8px;font-weight:bold}#result{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:18px}</style></head><body><main><h2>ORIKAEZE HUB — Customer Auth Test</h2><p>This runs registration, session verification, logout, login and session verification against the isolated Preview staging database. It does not touch Production or make payments.</p><button id=\"run\">Run Customer Authentication Test</button><div id=\"result\" role=\"status\"></div></main><script>\nconst out=document.getElementById(\"result\"),btn=document.getElementById(\"run\");\nasync function call(path,body,token){const r=await fetch(location.origin+path,{method:body?\"POST\":\"GET\",headers:{\"Content-Type\":\"application/json\",...(token?{Authorization:\"Bearer \"+token}:{})},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();if(!r.ok||!d.success)throw Error(d.message||path+\" failed (\"+r.status+\")\");return d}\nbtn.onclick=async()=>{btn.disabled=true;out.textContent=\"Running isolated Preview checks…\";let token=\"\";\ntry{const bytes=new Uint8Array(12);crypto.getRandomValues(bytes);const suffix=Array.from(bytes,x=>x.toString(16).padStart(2,\"0\")).join(\"\");const email=\"preview-auth-test-\"+suffix+\"@example.com\",phone=\"08012345678\",password=\"Preview-\"+suffix+\"-Safe9!\";const reg=await call(\"/api/auth/register\",{fullName:\"Preview Test Customer\",email,phone,password});token=reg.token;const first=await call(\"/api/auth/me\",null,token);if(first.user.email!==email)throw Error(\"Registration session returned an unexpected customer.\");await call(\"/api/auth/logout\",{},token);token=\"\";const login=await call(\"/api/auth/login\",{email,password});token=login.token;const second=await call(\"/api/auth/me\",null,token);if(second.user.email!==email)throw Error(\"Login session returned an unexpected customer.\");await call(\"/api/auth/logout\",{},token);token=\"\";out.textContent=\"PASS — Registration: successful\\nPASS — New customer session: verified\\nPASS — Logout: successful\\nPASS — Customer login: successful\\nPASS — Login session: verified\\nPASS — Final logout: successful\\n\\nA synthetic test customer remains in the Preview staging database only: \"+email+\"\\nNo Production customer data or payment services were used.\"}\ncatch(e){if(token){try{await call(\"/api/auth/logout\",{},token)}catch{}}out.textContent=\"TEST FAILED: \"+e.message+\"\\nNo Production data was used.\"}\nfinally{btn.disabled=false}};\n</script></body></html>";
-      return new Response(page,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff","X-Frame-Options":"DENY"}});
-    }
-    // Temporary Preview-only configuration diagnostic; never returns secret values.
-    if (previewApiHost && url.pathname === "/__preview-config-check" && request.method === "GET") {
-      return reply({
-        success: true,
-        preview: true,
-        databaseConfigured: Boolean(env.DB),
-        adminEmailConfigured: Boolean(clean(env.ADMIN_EMAIL)),
-        adminPasswordConfigured: String(env.ADMIN_PASSWORD || "").length >= 12
-      });
-    }
     // Private founder administration. Requires ADMIN_EMAIL and ADMIN_PASSWORD Worker secrets/variables.
     if (url.pathname.startsWith("/api/admin/")) {
       if (url.pathname === "/api/admin/login" && request.method === "POST") {
