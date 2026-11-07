@@ -24,7 +24,7 @@ Do not deploy this branch to the production Worker until the Preview has been te
    ```
 
    This applies the admin-session and security-rate-limit tables. Do not point this command at the production database.
-4. In Cloudflare Settings, configure Preview Base secrets separately. Use a dedicated test administrator email/password. Do not copy live Paystack or MELE secrets into Preview; payment and provider delivery must not be tested with live credentials.
+4. In Cloudflare Settings, configure the Preview environment variables/secrets for this Worker (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ALLOWED_ORIGIN`). After changing Preview secrets, trigger a new Preview deployment so the running Worker loads the saved values. Use a dedicated test administrator email/password. Do not copy live Paystack or MELE secrets into Preview; payment and provider delivery must not be tested with live credentials.
 5. Test Preview registration, customer login, admin login/session expiry behavior, and read-only API behavior. Confirm the Preview uses only the staging D1 database.
 6. Only after those checks pass should the changes be considered for production release.
 
