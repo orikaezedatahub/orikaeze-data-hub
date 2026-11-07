@@ -16,7 +16,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ORIKAEZE HUB | Buy Data and Airtime in Nigeria">
 <meta name="twitter:description" content="Buy mobile data and airtime in Nigeria with ORIKAEZE HUB.">
-<meta name="theme-color" content="#07583e">
+<meta name="theme-color" content="#101b32">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <meta name="mobile-web-app-capable" content="yes">
@@ -48,91 +48,104 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;color:#172b23;background:#fff;line-height:1.6}
+:root{--ink:#14213a;--muted:#69778c;--green:#087f5b;--mint:#8ff0c7;--line:#e7ecf3;--surface:#fff;--page:#f4f7fb}
+html{scroll-behavior:smooth}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--page);line-height:1.6;-webkit-font-smoothing:antialiased}
 a{text-decoration:none;color:inherit}
-header{display:flex;align-items:center;justify-content:space-between;padding:18px 6%;border-bottom:1px solid #e9eee9;gap:15px}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{background:#07583e;color:white;padding:10px;border-radius:10px;font-weight:bold}
-.brand strong{display:block;font-size:14px}
-.brand small{color:#718078;font-size:11px}
-nav{display:flex;gap:23px;font-size:13px;font-weight:bold}
-nav a:hover{color:#078052}
-.start{background:#07583e;color:white;padding:11px 17px;border-radius:7px;font-size:12px}
-.hero{background:radial-gradient(circle at 85% 20%,#d9eee1 0,transparent 34%),linear-gradient(135deg,#f0f8f2,#e8f3eb);padding:88px 7%;display:grid;grid-template-columns:1.1fr .9fr;gap:45px;align-items:center}
-.tag{color:#078052;font-size:11px;font-weight:bold;letter-spacing:2px}
-h1{font-size:clamp(40px,5.2vw,64px);line-height:1.08;letter-spacing:-1.7px;margin:19px 0}
-h1 span{color:#078052}
-.hero p{color:#586b60;max-width:480px;font-size:16px;line-height:1.8}
-.buttons{display:flex;gap:12px;margin-top:27px;flex-wrap:wrap}
-.btn{padding:13px 22px;border-radius:7px;font-weight:bold;font-size:13px}
-.green{background:#078052;color:white}
-.white{background:white;border:1px solid #dce6de}
-.hero-card{background:rgba(255,255,255,.94);padding:30px;border-radius:20px;border:1px solid rgba(255,255,255,.9);box-shadow:0 22px 55px rgba(18,60,32,.11)}
-.hero-card h2{font-size:22px;margin:12px 0 20px}
-.service{display:flex;justify-content:space-between;align-items:center;padding:17px;border:1px solid #e7eee8;border-radius:12px;margin-top:12px;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.service:hover{transform:translateY(-2px);border-color:#b8d7c3;box-shadow:0 8px 18px rgba(18,60,32,.06)}
-.service b{font-size:14px}
-.service small{display:block;color:#718078;font-size:11px}
-.arrow{color:#078052;font-size:22px}
-.coming{background:#fafcfb}
-.soon{font-size:10px;font-weight:bold;color:#8a7147;background:#fff4df;padding:5px 8px;border-radius:20px}
-.section{padding:72px 7%;text-align:center}.section> .tag:first-child{display:inline-block}
-.section h2{font-size:30px;margin:10px 0 25px}
-.networks{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:25px}
-.network{border:1px solid #e5ece6;border-radius:14px;padding:25px 10px;background:#fff;box-shadow:0 8px 22px rgba(18,60,32,.035);transition:transform .2s ease,box-shadow .2s ease}.network:hover{transform:translateY(-3px);box-shadow:0 13px 25px rgba(18,60,32,.08)}
-.network strong{font-size:19px}
-.network small{display:block;color:#718078;font-size:11px}
-.steps{background:#f7faf7;padding:65px 7%;text-align:center}
-.steps h2{font-size:29px;margin:10px 0 30px}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 6%;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);gap:18px;position:relative;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;min-width:max-content}
+.brand strong{display:block;font-size:15px;letter-spacing:.35px;color:#12213a}
+.brand strong:before{content:"O";display:inline-grid;place-items:center;width:38px;height:38px;margin-right:10px;border-radius:12px;background:linear-gradient(145deg,#0a966b,#07533f);color:#fff;font-size:18px;font-weight:850;box-shadow:0 7px 16px #087f5b30;vertical-align:middle}
+.brand small{display:block;margin-top:2px;color:#7b8798;font-size:11px;letter-spacing:.2px}
+nav{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650}
+nav a{padding:8px 10px;border-radius:9px;color:#536176;transition:background .2s,color .2s}
+nav a:hover{background:#edf7f3;color:#087f5b}
+.start{background:#087f5b;color:#fff;padding:11px 17px;border-radius:10px;font-size:12px;font-weight:750;box-shadow:0 7px 16px #087f5b24;transition:transform .2s,box-shadow .2s}
+.start:hover,.btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px #087f5b2b}
+.hero{position:relative;overflow:hidden;background:radial-gradient(ellipse at 82% 12%,#1e806b55 0,transparent 34%),radial-gradient(ellipse at 8% 100%,#147c7650 0,transparent 38%),linear-gradient(125deg,#101b32 0%,#142b45 58%,#123b43 100%);padding:88px 7%;display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center;color:#fff}
+.hero:after{content:"";position:absolute;width:420px;height:420px;border:1px solid #ffffff12;border-radius:50%;right:-150px;top:-220px;box-shadow:0 0 0 42px #ffffff08,0 0 0 84px #ffffff05;pointer-events:none}
+.hero>div{position:relative;z-index:1}
+.tag{color:#087f5b;font-size:11px;font-weight:800;letter-spacing:1.8px}
+.hero .tag{color:var(--mint)}
+h1{font-size:clamp(42px,5.4vw,68px);line-height:1.04;letter-spacing:-2.3px;margin:19px 0 20px;font-weight:850}
+h1 span{color:var(--mint)}
+.hero p{color:#d2dce8;max-width:490px;font-size:16px;line-height:1.85}
+.buttons{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:14px 21px;border-radius:10px;font-weight:750;font-size:13px;transition:transform .2s,box-shadow .2s}
+.green{background:#18a878;color:#fff;box-shadow:0 8px 18px #0c9b6d30}
+.white{background:#ffffff12;border:1px solid #ffffff35;color:#fff}
+.hero-card{background:#fff;color:var(--ink);padding:27px;border-radius:22px;border:1px solid #ffffffa8;box-shadow:0 26px 65px #07132655}
+.hero-card h2{font-size:22px;letter-spacing:-.5px;margin:9px 0 18px}
+.hero-card .tag{color:#087f5b}
+.service{display:flex;justify-content:space-between;align-items:center;padding:15px 16px;border:1px solid #e8edf3;border-radius:13px;margin-top:10px;background:#fff;transition:transform .2s,border-color .2s,box-shadow .2s}
+.service:hover{transform:translateY(-2px);border-color:#b7e6d4;box-shadow:0 9px 20px #152b4310}
+.service b{font-size:14px;color:#1b2b43}
+.service small{display:block;color:#8490a0;font-size:11px;margin-top:2px}
+.arrow{color:#0a9a6b;font-size:23px;font-weight:700}
+.coming{background:#f8fafc}
+.soon{font-size:10px;font-weight:800;color:#8a6a2f;background:#fff3d9;padding:5px 9px;border-radius:20px}
+.section{padding:76px 7%;text-align:center}
+.section h2,.steps h2{font-size:clamp(27px,3vw,34px);letter-spacing:-.8px;margin:10px 0 26px;color:#172641}
+.networks{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:28px}
+.network{border:1px solid var(--line);border-radius:16px;padding:27px 12px;background:#fff;box-shadow:0 8px 24px #182b4508;transition:transform .2s,box-shadow .2s}
+.network:hover{transform:translateY(-4px);box-shadow:0 15px 30px #182b4512}
+.network strong{font-size:20px;letter-spacing:-.3px}
+.network small{display:block;color:#8490a0;font-size:11px;margin-top:3px}
+.steps{background:#eaf0f6;padding:72px 7%;text-align:center}
 .step-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;text-align:left}
-.step{background:white;border:1px solid #e7eee8;padding:25px;border-radius:15px;box-shadow:0 8px 22px rgba(18,60,32,.035)}
-.step b{color:#078052;font-size:22px}
-.step h3{font-size:16px;margin:10px 0}
-.step p{font-size:13px;color:#718078}
-.callout{margin:60px 7%;padding:40px;background:linear-gradient(120deg,#06452f,#08764f);color:white;border-radius:18px;display:flex;justify-content:space-between;align-items:center;gap:20px;box-shadow:0 18px 35px rgba(7,88,62,.16)}
-.callout p{font-size:13px;color:#d5e8dc}
-.callout a{background:white;color:#07583e;padding:12px 18px;border-radius:7px;font-weight:bold;font-size:12px}
-footer{padding:35px 7%;border-top:1px solid #e9eee9;text-align:center;color:#718078;font-size:12px}
-footer strong{color:#172b23}
+.step{background:#fff;border:1px solid #e2e9f1;padding:26px;border-radius:17px;box-shadow:0 9px 24px #182b4508}
+.step b{display:inline-grid;place-items:center;width:39px;height:39px;border-radius:12px;background:#e8f7f1;color:#087f5b;font-size:14px}
+.step h3{font-size:16px;margin:13px 0 7px;color:#1a2a43}
+.step p{font-size:13px;color:#748196}
+.callout{margin:62px 7%;padding:42px 44px;background:linear-gradient(120deg,#087f5b,#07513f);color:#fff;border-radius:20px;display:flex;justify-content:space-between;align-items:center;gap:22px;box-shadow:0 20px 42px #087f5b24}
+.callout h2{font-size:25px;letter-spacing:-.5px;margin-bottom:5px}
+.callout p{font-size:13px;color:#d7f0e6}
+.callout a{background:#fff;color:#075d45;padding:13px 19px;border-radius:10px;font-weight:800;font-size:12px;white-space:nowrap}
+footer{padding:36px 7%;border-top:1px solid var(--line);text-align:center;background:#fff;color:#7b8798;font-size:12px}
+footer strong{color:#152540;letter-spacing:.6px}
 footer p{margin:7px 0}
 footer small{display:block;margin-top:12px;font-size:10px}
-@media(max-width:750px){
-.hero{padding-top:58px;padding-bottom:58px}h1{letter-spacing:-1px}.hero-card{padding:22px}.section{padding:55px 6%}
-header{flex-wrap:wrap;padding:15px 5%}
-nav{order:3;width:100%;justify-content:space-between;gap:8px;font-size:11px}
-.start{font-size:11px;padding:9px 12px}
-.hero{grid-template-columns:1fr;padding:55px 6%;gap:30px}
-.networks{grid-template-columns:repeat(2,1fr)}
-.step-grid{grid-template-columns:1fr}
-.callout{margin:35px 5%;padding:25px;display:block}
-.callout a{display:inline-block;margin-top:18px}
-}
-
-/* ORIKAEZE HUB — PROFESSIONAL VISUAL SYSTEM */
-:root{--hub-green:#07583e;--hub-accent:#078052;--hub-ink:#172b23;--hub-muted:#718078;--hub-line:#e5ece6;--hub-soft:#f3f8f4}
-html{scroll-behavior:smooth}
-body{background:var(--hub-soft);color:var(--hub-ink);-webkit-font-smoothing:antialiased}
-header{position:relative;z-index:5;background:rgba(255,255,255,.97);box-shadow:0 5px 22px rgba(17,55,35,.045);padding-top:16px;padding-bottom:16px}
-.brand{display:flex;align-items:center;gap:10px;min-width:max-content}
-.brand strong{font-size:15px;letter-spacing:.35px;color:var(--hub-green)}
-.brand strong:before{content:"O";display:inline-grid;place-items:center;width:35px;height:35px;margin-right:9px;border-radius:11px;background:linear-gradient(145deg,#0b7652,#06432f);color:#fff;font-size:17px;font-weight:800;box-shadow:0 5px 12px rgba(7,88,62,.18);vertical-align:middle}
-.brand small{display:block;margin-top:1px;letter-spacing:.15px}
-nav{align-items:center}
-nav a{padding:7px 9px;border-radius:7px;transition:background .2s ease,color .2s ease}
-nav a:hover{background:#edf6f0;color:var(--hub-green)}
-a,button,input,select{ -webkit-tap-highlight-color:transparent }
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(7,128,82,.25);outline-offset:2px}
-button,.btn,.start,.home{transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
-button.continue,.btn.green,.start,.home{box-shadow:0 7px 16px rgba(7,88,62,.13)}
-button.continue:hover,.btn.green:hover,.start:hover,.home:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(7,88,62,.2)}
-input,select{transition:border-color .2s ease,box-shadow .2s ease}
-input:focus,select:focus{border-color:var(--hub-accent);box-shadow:0 0 0 3px rgba(7,128,82,.1);outline:0}
-.form-card,.card,.step,.hero-card{box-shadow:0 14px 38px rgba(18,60,32,.055)}
-.form-card{border-radius:18px;border-color:#e2ebe4}
-label{color:#28483a}
-footer{border-top:1px solid var(--hub-line);line-height:1.8}
-footer strong{letter-spacing:.5px;color:var(--hub-green)}
-@media(max-width:750px){header{gap:12px}.brand strong{font-size:14px}nav a{padding:6px 5px}}
+a:focus-visible{outline:3px solid #24b98766;outline-offset:3px}
+@media(max-width:900px){header{padding-left:4%;padding-right:4%}nav{gap:2px}nav a{padding:7px 6px;font-size:12px}.hero{padding:70px 6%;gap:28px}}
+@media(max-width:750px){header{flex-wrap:wrap;padding:14px 5%}.brand strong{font-size:14px}.start{font-size:11px;padding:9px 12px}nav{order:3;width:100%;justify-content:space-between;gap:3px;font-size:11px}nav a{padding:7px 5px;font-size:11px}.hero{grid-template-columns:1fr;padding:58px 6%;gap:30px}h1{font-size:clamp(41px,10vw,56px);letter-spacing:-1.6px}.hero-card{padding:22px}.section{padding:58px 6%}.networks{grid-template-columns:repeat(2,1fr);gap:12px}.step-grid{grid-template-columns:1fr}.steps{padding:58px 6%}.callout{margin:38px 5%;padding:27px;display:block}.callout a{display:inline-flex;margin-top:18px}}
+@media(max-width:380px){nav a{font-size:10px;padding-left:3px;padding-right:3px}.buttons .btn{width:100%}.hero-card{padding:18px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* REFINED BRAND DETAILS + SERVICE PREVIEW */
+.hero{min-height:590px}
+.hero-card{position:relative;isolation:isolate;padding:0;overflow:visible;border-radius:24px;box-shadow:0 30px 75px #07132666}
+.hero-card:before{content:"";position:absolute;inset:13px -13px -13px 13px;border:1px solid #8ff0c744;border-radius:25px;z-index:-1}
+.preview-top{height:48px;padding:0 19px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #edf1f5;color:#8792a1;font-size:9px;font-weight:850;letter-spacing:1.1px}
+.preview-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#d7e2e9;margin-right:4px}
+.preview-menu{font-size:15px;letter-spacing:2px;color:#a5afbb}
+.preview-welcome{padding:25px 25px 13px}
+.preview-welcome h2{font-size:22px;line-height:1.2;letter-spacing:-.7px;margin:9px 0 5px}
+.preview-welcome p{font-size:12px;color:#8490a0}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:10px 22px 21px}
+.preview-service{position:relative;display:flex;flex-direction:column;align-items:flex-start;min-height:126px;padding:15px;border:1px solid #e9eef3;border-radius:14px;background:linear-gradient(145deg,#fff,#f9fbfd);transition:transform .2s,border-color .2s,box-shadow .2s}
+.preview-service:hover{transform:translateY(-3px);border-color:#a9dfc9;box-shadow:0 12px 24px #152b4310}
+.preview-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;font-size:19px;font-style:normal;font-weight:800;margin-bottom:12px}
+.data-icon{background:#e6f7f0;color:#087f5b}
+.airtime-icon{background:#fff4df;color:#bd7b16}
+.cable-icon{background:#edf0ff;color:#5967c9}
+.edu-icon{background:#f9eafa;color:#a34da7}
+.preview-service b{font-size:12px;color:#1b2b43}
+.preview-service small{font-size:10px;color:#8b96a5;margin-top:2px}
+.preview-service i{position:absolute;right:13px;top:13px;color:#91a0ad;font-style:normal;font-size:13px}
+.preview-bottom{display:flex;align-items:center;gap:10px;margin:0 22px 22px;padding:13px 14px;border-radius:12px;background:#f0f8f4}
+.preview-check{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#d8f3e6;color:#087f5b;font-weight:900}
+.preview-bottom b{display:block;font-size:10px;color:#315343}
+.preview-bottom small{display:block;font-size:9px;color:#84958d;margin-top:1px}
+.section{max-width:1280px;margin:0 auto}
+.network{position:relative;overflow:hidden}
+.network:before{content:"";display:block;width:30px;height:3px;border-radius:4px;background:#0c9b6d;margin:0 auto 15px}
+.steps{position:relative;overflow:hidden}
+.steps:before{content:"";position:absolute;left:-130px;top:-180px;width:340px;height:340px;border-radius:50%;background:#dce9f3;opacity:.55}
+.step-grid{position:relative;max-width:1120px;margin:0 auto}
+.callout{position:relative;overflow:hidden}
+.callout:after{content:"";position:absolute;width:220px;height:220px;border:1px solid #ffffff22;border-radius:50%;right:13%;top:-130px;box-shadow:0 0 0 25px #ffffff0b,0 0 0 50px #ffffff08;pointer-events:none}
+.callout>div,.callout>a{position:relative;z-index:1}
+@media(max-width:750px){.hero{min-height:0}.hero-card:before{inset:9px -7px -9px 7px}.preview-welcome{padding:22px 20px 10px}.preview-grid{padding:8px 17px 17px}.preview-bottom{margin:0 17px 17px}.preview-service{min-height:118px}}
 
 </style>
 </head>
@@ -173,39 +186,20 @@ footer strong{letter-spacing:.5px;color:var(--hub-green)}
 </div>
 
 <div class="hero-card">
-<span class="tag">OUR SERVICES</span>
-<h2>What do you need today?</h2>
-
-<a href="data.html" class="service">
-<div><b>Mobile Data</b><small>Choose your preferred data bundle</small></div>
-<span class="arrow">→</span>
-</a>
-
-<a href="airtime.html" class="service">
-<div><b>Airtime Top-up</b><small>Recharge your mobile number</small></div>
-<span class="arrow">→</span>
-</a>
-
-<a href="cable-tv.html" class="service">
-<div><b>Cable TV</b><small>DStv, GOtv and StarTimes</small></div>
-<span class="arrow">→</span>
-</a>
-
-<a href="education.html" class="service">
-<div><b>Education PINs</b><small>WAEC, NECO and JAMB</small></div>
-<span class="arrow">→</span>
-</a>
-
-<div class="service coming">
-<div><b>Electricity Bill Payment</b><small>Coming Soon</small></div>
-<span class="soon">Soon</span>
+<div class="preview-top"><div><span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span></div><span>ORIKAEZE HUB</span><span class="preview-menu">•••</span></div>
+<div class="preview-welcome"><span class="tag">WELCOME TO YOUR HUB</span><h2>What would you like to do?</h2><p>Everyday digital services, all in one place.</p></div>
+<div class="preview-grid">
+<a href="data.html" class="preview-service"><span class="preview-icon data-icon">◈</span><b>Buy Data</b><small>Choose a bundle</small><i>↗</i></a>
+<a href="airtime.html" class="preview-service"><span class="preview-icon airtime-icon">ϟ</span><b>Airtime</b><small>Top up a line</small><i>↗</i></a>
+<a href="cable-tv.html" class="preview-service"><span class="preview-icon cable-icon">▣</span><b>Cable TV</b><small>Pay subscription</small><i>↗</i></a>
+<a href="education.html" class="preview-service"><span class="preview-icon edu-icon">✦</span><b>Education</b><small>Get exam PINs</small><i>↗</i></a>
 </div>
+<div class="preview-bottom"><span class="preview-check">✓</span><span><b>Simple. Convenient. Accessible.</b><small>Designed for your everyday needs.</small></span></div>
 </div>
 </section>
 
 <section class="section">
-<div class="tag">BUILT FOR EVERYDAY CONVENIENCE</div>
-<span class="tag">NETWORK OPTIONS</span>
+<div class="tag">NETWORK OPTIONS</div>
 <h2>Choose your network</h2>
 
 <div class="networks">
