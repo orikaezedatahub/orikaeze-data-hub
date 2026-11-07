@@ -322,13 +322,15 @@ export default {
     const previewApiHost =
       url.hostname.endsWith("-orikaeze-data-hub.eruakennethnnabuike.workers.dev") &&
       url.hostname !== "orikaeze-data-hub.eruakennethnnabuike.workers.dev";
-    const previewSiteOrigin =
-      "https://marketplace-foundation-orikaeze-data-hub-site.eruakennethnnabuike.workers.dev";
     const previewSiteRequest =
-      previewApiHost && origin === previewSiteOrigin;
-    const responseOrigin = previewSiteRequest ? origin : allowedOrigin;
+      previewApiHost &&
+      /^https:\/\/([a-z0-9-]+-)?orikaeze-data-hub-site\.eruakennethnnabuike\.workers\.dev$/i.test(origin);
+    const previewSameOriginRequest =
+      previewApiHost && origin === url.origin;
+    const previewRequest = previewSiteRequest || previewSameOriginRequest;
+    const responseOrigin = previewRequest ? origin : allowedOrigin;
 
-    if (origin && origin !== allowedOrigin && !previewSiteRequest) {
+    if (origin && origin !== allowedOrigin && !previewRequest) {
       return json({ success: false, message: "Origin not allowed." }, 403);
     }
 
