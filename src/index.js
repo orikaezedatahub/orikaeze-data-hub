@@ -1,6 +1,6 @@
 const MELE_BASE = "https://meledata.ng/api/v1/developer";
 const PAYSTACK_BASE = "https://api.paystack.co";
-const BUILD_VERSION = "2026-11-05.1";
+const BUILD_VERSION = "2026-11-07.1-security";
 
 const json = (data, status = 200, origin = "*") =>
   new Response(JSON.stringify(data), {
@@ -10,7 +10,16 @@ const json = (data, status = 200, origin = "*") =>
       "Access-Control-Allow-Origin": origin,
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Vary": "Origin"
+      "Vary": "Origin",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Cache-Control": "no-store",
+      "Strict-Transport-Security": "max-age=31536000",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-site",
+      "X-Permitted-Cross-Domain-Policies": "none"
     }
   });
 
@@ -277,6 +286,25 @@ async function processPaidOrder(env, reference) {
 
 
 async function hashText(v){const x=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));return [...new Uint8Array(x)].map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function checkRateLimit(env,request,scope,maxAttempts,windowMinutes,identifier=""){
+  const ip=request.headers.get("CF-Connecting-IP")||"unknown";
+  // Hash the IP and optional account identifier together; never store either in plaintext.
+  const ipHash=await hashText(ip+"|"+String(identifier).toLowerCase());
+  await env.DB.prepare(`
+    INSERT INTO security_rate_limits(scope,ip_hash,window_started_at,attempts,blocked_until)
+    VALUES(?,?,CURRENT_TIMESTAMP,1,NULL)
+    ON CONFLICT(scope,ip_hash) DO UPDATE SET
+      attempts=CASE WHEN window_started_at<=datetime('now','-${windowMinutes} minutes') THEN 1 ELSE attempts+1 END,
+      window_started_at=CASE WHEN window_started_at<=datetime('now','-${windowMinutes} minutes') THEN CURRENT_TIMESTAMP ELSE window_started_at END,
+      blocked_until=CASE
+        WHEN blocked_until IS NOT NULL AND blocked_until>CURRENT_TIMESTAMP THEN blocked_until
+        WHEN window_started_at<=datetime('now','-${windowMinutes} minutes') THEN NULL
+        WHEN attempts+1>=${maxAttempts} THEN datetime('now','+${windowMinutes} minutes')
+        ELSE NULL END
+  `).bind(scope,ipHash).run();
+  const state=await env.DB.prepare("SELECT blocked_until FROM security_rate_limits WHERE scope=? AND ip_hash=?").bind(scope,ipHash).first();
+  return !state?.blocked_until || state.blocked_until<=new Date().toISOString().replace("T"," ").slice(0,19);
+}
 function issueToken(){return [...crypto.getRandomValues(new Uint8Array(32))].map(b=>b.toString(16).padStart(2,"0")).join("")}
 async function securePassword(v,s){const salt=s?Uint8Array.from(s.match(/.{2}/g),x=>parseInt(x,16)):crypto.getRandomValues(new Uint8Array(16));const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(v),"PBKDF2",false,["deriveBits"]);const b=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:100000,hash:"SHA-256"},k,256);return{salt:[...salt].map(x=>x.toString(16).padStart(2,"0")).join(""),hash:[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}}
 async function adminSession(req,env){const a=req.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";if(t.length!==64)return false;const row=await env.DB.prepare("SELECT token_hash FROM admin_sessions WHERE token_hash=? AND expires_at>CURRENT_TIMESTAMP").bind(await hashText(t)).first();return !!row}
@@ -291,8 +319,18 @@ export default {
     const origin = request.headers.get("Origin") || "";
     const allowedOrigin =
       env.ALLOWED_ORIGIN || "https://orikaezedatahub.github.io";
+    const previewApiHost =
+      url.hostname.endsWith("-orikaeze-data-hub.eruakennethnnabuike.workers.dev") &&
+      url.hostname !== "orikaeze-data-hub.eruakennethnnabuike.workers.dev";
+    const previewSiteRequest =
+      previewApiHost &&
+      /^https:\/\/([a-z0-9-]+-)?orikaeze-data-hub-site\.eruakennethnnabuike\.workers\.dev$/i.test(origin);
+    const previewSameOriginRequest =
+      previewApiHost && origin === url.origin;
+    const previewRequest = previewSiteRequest || previewSameOriginRequest;
+    const responseOrigin = previewRequest ? origin : allowedOrigin;
 
-    if (origin && origin !== allowedOrigin) {
+    if (origin && origin !== allowedOrigin && !previewRequest) {
       return json({ success: false, message: "Origin not allowed." }, 403);
     }
 
@@ -300,15 +338,16 @@ export default {
       return new Response(null, {
         status: 204,
         headers: {
-          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Origin": responseOrigin,
           "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization"
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Vary": "Origin"
         }
       });
     }
 
     const reply = (data, status = 200) =>
-      json(data, status, allowedOrigin);
+      json(data, status, responseOrigin);
 
     if (url.pathname === "/" || url.pathname === "/api/health") {
       return reply({
@@ -424,15 +463,17 @@ export default {
     if (url.pathname.startsWith("/api/admin/")) {
       if (url.pathname === "/api/admin/login" && request.method === "POST") {
         let b; try { b = await request.json(); } catch { return reply({success:false,message:"Invalid request."},400); }
+        const suppliedEmail = clean(b.email).toLowerCase();
+        if (!(await checkRateLimit(env,request,"admin_login",5,15,suppliedEmail))) return reply({success:false,message:"Too many login attempts. Try again later."},429);
         const configuredEmail = clean(env.ADMIN_EMAIL).toLowerCase();
         const configuredPassword = String(env.ADMIN_PASSWORD || "");
-        const suppliedEmail = clean(b.email).toLowerCase();
         const suppliedPassword = String(b.password || "");
+        if (suppliedEmail.length > 254 || suppliedPassword.length > 256) return reply({success:false,message:"Invalid administrator credentials."},401);
         if (!configuredEmail || configuredPassword.length < 12) return reply({success:false,message:"Admin access has not been configured."},503);
         if (!constantTimeEqual(suppliedEmail,configuredEmail) || !constantTimeEqual(suppliedPassword,configuredPassword)) return reply({success:false,message:"Invalid administrator credentials."},401);
         const token = issueToken();
-        await env.DB.prepare("INSERT INTO admin_sessions(token_hash,expires_at) VALUES(?,datetime('now','+12 hours'))").bind(await hashText(token)).run();
-        return reply({success:true,token,expires_in:43200});
+        await env.DB.prepare("INSERT INTO admin_sessions(token_hash,expires_at) VALUES(?,datetime('now','+4 hours'))").bind(await hashText(token)).run();
+        return reply({success:true,token,expires_in:14400});
       }
       if (url.pathname === "/api/admin/logout" && request.method === "POST") {
         const a=request.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";
@@ -526,6 +567,7 @@ export default {
     }
 
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      if (!(await checkRateLimit(env,request,"customer_register",5,60))) return reply({success:false,message:"Too many registration attempts. Try again later."},429);
       let b;
       try {
         b = await request.json();
@@ -606,7 +648,9 @@ export default {
     }
     if(url.pathname==="/api/auth/login"&&request.method==="POST"){
       let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
-      const u=await env.DB.prepare("SELECT * FROM customers WHERE email=?").bind(clean(b.email).toLowerCase()).first(),password=String(b.password||"");
+      const loginEmail=clean(b.email).toLowerCase();
+      if (!(await checkRateLimit(env,request,"customer_login",10,15,loginEmail))) return reply({success:false,message:"Too many login attempts. Try again later."},429);
+      const u=await env.DB.prepare("SELECT * FROM customers WHERE email=?").bind(loginEmail).first(),password=String(b.password||"");
       if(!u||password.length>128)return reply({success:false,message:"Email or password is incorrect."},401);
       const p=await securePassword(password,u.password_salt);if(!constantTimeEqual(p.hash,u.password_hash))return reply({success:false,message:"Email or password is incorrect."},401);
       const token=issueToken();await env.DB.prepare("INSERT INTO auth_sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now','+30 days'))").bind(u.id,await hashText(token)).run();return reply({success:true,token,user:{id:u.id,full_name:u.full_name,email:u.email,phone:u.phone}});

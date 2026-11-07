@@ -17,4 +17,5 @@ database_id = "8d82fb99-838a-482c-ba00-ed791fde1e8a"
 
 [[previews.d1_databases]]
 binding = "DB"
-database_id = "8d82fb99-838a-482c-ba00-ed791fde1e8a"
+database_name = "orikaeze-data-hub-staging"
+database_id = "c9ebe3e2-f5f5-44de-83c4-ae4d4528e7f6"

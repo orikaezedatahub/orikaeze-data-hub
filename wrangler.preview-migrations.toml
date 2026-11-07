@@ -1,0 +1,8 @@
+name = "orikaeze-data-hub-preview-migrations"
+compatibility_date = "2026-11-02"
+
+[[d1_databases]]
+binding = "PREVIEW_DB"
+database_name = "orikaeze-data-hub-staging"
+database_id = "c9ebe3e2-f5f5-44de-83c4-ae4d4528e7f6"
+migrations_dir = "migrations"
