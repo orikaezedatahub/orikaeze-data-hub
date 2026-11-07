@@ -1,6 +1,6 @@
 const MELE_BASE = "https://meledata.ng/api/v1/developer";
 const PAYSTACK_BASE = "https://api.paystack.co";
-const BUILD_VERSION = "2026-11-05.1";
+const BUILD_VERSION = "2026-11-07.1-security";
 
 const json = (data, status = 200, origin = "*") =>
   new Response(JSON.stringify(data), {
