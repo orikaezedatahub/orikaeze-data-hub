@@ -320,7 +320,8 @@ export default {
     const allowedOrigin =
       env.ALLOWED_ORIGIN || "https://orikaezedatahub.github.io";
     const previewApiHost =
-      url.hostname === "marketplace-foundation-orikaeze-data-hub.eruakennethnnabuike.workers.dev";
+      url.hostname.endsWith("-orikaeze-data-hub.eruakennethnnabuike.workers.dev") &&
+      url.hostname !== "orikaeze-data-hub.eruakennethnnabuike.workers.dev";
     const previewSiteOrigin =
       "https://marketplace-foundation-orikaeze-data-hub-site.eruakennethnnabuike.workers.dev";
     const previewSiteRequest =
@@ -350,7 +351,7 @@ export default {
     // Serve a temporary login-test page there and send credentials only to the
     // isolated API Preview Worker. This route is unavailable on Production.
     if (
-      url.hostname === "marketplace-foundation-orikaeze-data-hub.eruakennethnnabuike.workers.dev" &&
+      previewApiHost &&
       url.pathname === "/admin.html" &&
       request.method === "GET"
     ) {
