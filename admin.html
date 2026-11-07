@@ -11,7 +11,7 @@
 <p class="foot">ORIKAEZE DATA HUB · Founder administration · Keep this login private.</p></section>
 </main>
 <script>
-const API="https://orikaeze-data-hub.eruakennethnnabuike.workers.dev";
+const API="https://marketplace-foundation-orikaeze-data-hub.eruakennethnnabuike.workers.dev";
 const $=id=>document.getElementById(id);let token=sessionStorage.getItem("odh_admin_token")||"";
 const naira=k=>new Intl.NumberFormat("en-NG",{style:"currency",currency:"NGN",maximumFractionDigits:2}).format((Number(k)||0)/100);
 async function call(path,options={}){const r=await fetch(API+path,{...options,headers:{"Content-Type":"application/json","Authorization":"Bearer "+token,...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok||!d.success)throw Error(d.message||"Request failed");return d}
