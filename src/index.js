@@ -560,8 +560,37 @@ export default {
         return reply({success:true,orders:rows.results||[]});
       }
       if (url.pathname === "/api/admin/wallet-activity" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT l.reference,c.full_name,c.email,l.type,l.amount_kobo,l.description,l.status,l.created_at FROM wallet_ledger l JOIN customers c ON c.id=l.user_id ORDER BY l.id DESC LIMIT 200").all();
-        return reply({success:true,activity:rows.results||[]});
+        const rows = await env.DB.prepare(`
+          SELECT * FROM (
+            SELECT
+              l.reference,
+              c.full_name,
+              c.email,
+              l.type,
+              l.amount_kobo,
+              l.description,
+              l.status,
+              l.created_at
+            FROM wallet_ledger l
+            JOIN customers c ON c.id = l.user_id
+
+            UNION ALL
+
+            SELECT
+              o.reference,
+              '' AS full_name,
+              o.email,
+              'order' AS type,
+              o.amount AS amount_kobo,
+              o.service || ' purchase (' || o.network || ' - ' || o.phone || ')' AS description,
+              o.payment_status || ' / ' || o.delivery_status AS status,
+              o.created_at
+            FROM orders o
+          )
+          ORDER BY created_at DESC
+          LIMIT 300
+        `).all();
+        return reply({ success: true, activity: rows.results || [] });
       }
       return reply({success:false,message:"Admin route not found."},404);
     }
