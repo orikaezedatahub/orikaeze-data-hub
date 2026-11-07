@@ -516,6 +516,16 @@ form.addEventListener("submit",async e=>{
 
 
     if (!env.DB) return reply({success:false,message:"Database is not configured."},503);
+    // Temporary Preview-only configuration diagnostic; never returns secret values.
+    if (previewApiHost && url.pathname === "/__preview-config-check" && request.method === "GET") {
+      return reply({
+        success: true,
+        preview: true,
+        databaseConfigured: Boolean(env.DB),
+        adminEmailConfigured: Boolean(clean(env.ADMIN_EMAIL)),
+        adminPasswordConfigured: String(env.ADMIN_PASSWORD || "").length >= 12
+      });
+    }
     // Private founder administration. Requires ADMIN_EMAIL and ADMIN_PASSWORD Worker secrets/variables.
     if (url.pathname.startsWith("/api/admin/")) {
       if (url.pathname === "/api/admin/login" && request.method === "POST") {
