@@ -10,7 +10,12 @@ const json = (data, status = 200, origin = "*") =>
       "Access-Control-Allow-Origin": origin,
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Vary": "Origin"
+      "Vary": "Origin",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Cache-Control": "no-store"
     }
   });
 
@@ -277,6 +282,23 @@ async function processPaidOrder(env, reference) {
 
 
 async function hashText(v){const x=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v));return [...new Uint8Array(x)].map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function checkRateLimit(env,request,scope,maxAttempts,windowMinutes){
+  const ip=request.headers.get("CF-Connecting-IP")||"unknown";
+  const ipHash=await hashText(ip);
+  await env.DB.prepare(`
+    INSERT INTO security_rate_limits(scope,ip_hash,window_started_at,attempts,blocked_until)
+    VALUES(?,?,CURRENT_TIMESTAMP,1,NULL)
+    ON CONFLICT(scope,ip_hash) DO UPDATE SET
+      attempts=CASE WHEN window_started_at<=datetime('now','-${windowMinutes} minutes') THEN 1 ELSE attempts+1 END,
+      window_started_at=CASE WHEN window_started_at<=datetime('now','-${windowMinutes} minutes') THEN CURRENT_TIMESTAMP ELSE window_started_at END,
+      blocked_until=CASE
+        WHEN (CASE WHEN window_started_at<=datetime('now','-${windowMinutes} minutes') THEN 1 ELSE attempts+1 END)>=${maxAttempts}
+        THEN datetime('now','+${windowMinutes} minutes')
+        ELSE blocked_until END
+  `).bind(scope,ipHash).run();
+  const state=await env.DB.prepare("SELECT blocked_until FROM security_rate_limits WHERE scope=? AND ip_hash=?").bind(scope,ipHash).first();
+  return !state?.blocked_until || state.blocked_until<=new Date().toISOString().replace("T"," ").slice(0,19);
+}
 function issueToken(){return [...crypto.getRandomValues(new Uint8Array(32))].map(b=>b.toString(16).padStart(2,"0")).join("")}
 async function securePassword(v,s){const salt=s?Uint8Array.from(s.match(/.{2}/g),x=>parseInt(x,16)):crypto.getRandomValues(new Uint8Array(16));const k=await crypto.subtle.importKey("raw",new TextEncoder().encode(v),"PBKDF2",false,["deriveBits"]);const b=await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:100000,hash:"SHA-256"},k,256);return{salt:[...salt].map(x=>x.toString(16).padStart(2,"0")).join(""),hash:[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}}
 async function adminSession(req,env){const a=req.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";if(t.length!==64)return false;const row=await env.DB.prepare("SELECT token_hash FROM admin_sessions WHERE token_hash=? AND expires_at>CURRENT_TIMESTAMP").bind(await hashText(t)).first();return !!row}
@@ -423,6 +445,7 @@ export default {
     // Private founder administration. Requires ADMIN_EMAIL and ADMIN_PASSWORD Worker secrets/variables.
     if (url.pathname.startsWith("/api/admin/")) {
       if (url.pathname === "/api/admin/login" && request.method === "POST") {
+        if (!(await checkRateLimit(env,request,"admin_login",5,15))) return reply({success:false,message:"Too many login attempts. Try again later."},429);
         let b; try { b = await request.json(); } catch { return reply({success:false,message:"Invalid request."},400); }
         const configuredEmail = clean(env.ADMIN_EMAIL).toLowerCase();
         const configuredPassword = String(env.ADMIN_PASSWORD || "");
@@ -526,6 +549,7 @@ export default {
     }
 
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      if (!(await checkRateLimit(env,request,"customer_register",5,60))) return reply({success:false,message:"Too many registration attempts. Try again later."},429);
       let b;
       try {
         b = await request.json();
@@ -605,6 +629,7 @@ export default {
       }
     }
     if(url.pathname==="/api/auth/login"&&request.method==="POST"){
+      if (!(await checkRateLimit(env,request,"customer_login",10,15))) return reply({success:false,message:"Too many login attempts. Try again later."},429);
       let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
       const u=await env.DB.prepare("SELECT * FROM customers WHERE email=?").bind(clean(b.email).toLowerCase()).first(),password=String(b.password||"");
       if(!u||password.length>128)return reply({success:false,message:"Email or password is incorrect."},401);
