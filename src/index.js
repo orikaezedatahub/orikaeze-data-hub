@@ -461,8 +461,8 @@ export default {
         if (!configuredEmail || configuredPassword.length < 12) return reply({success:false,message:"Admin access has not been configured."},503);
         if (!constantTimeEqual(suppliedEmail,configuredEmail) || !constantTimeEqual(suppliedPassword,configuredPassword)) return reply({success:false,message:"Invalid administrator credentials."},401);
         const token = issueToken();
-        await env.DB.prepare("INSERT INTO admin_sessions(token_hash,expires_at) VALUES(?,datetime('now','+12 hours'))").bind(await hashText(token)).run();
-        return reply({success:true,token,expires_in:43200});
+        await env.DB.prepare("INSERT INTO admin_sessions(token_hash,expires_at) VALUES(?,datetime('now','+4 hours'))").bind(await hashText(token)).run();
+        return reply({success:true,token,expires_in:14400});
       }
       if (url.pathname === "/api/admin/logout" && request.method === "POST") {
         const a=request.headers.get("Authorization")||"",t=a.startsWith("Bearer ")?a.slice(7).trim():"";
