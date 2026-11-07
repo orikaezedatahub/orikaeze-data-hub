@@ -110,6 +110,43 @@ a:focus-visible{outline:3px solid #24b98766;outline-offset:3px}
 @media(max-width:750px){header{flex-wrap:wrap;padding:14px 5%}.brand strong{font-size:14px}.start{font-size:11px;padding:9px 12px}nav{order:3;width:100%;justify-content:space-between;gap:3px;font-size:11px}nav a{padding:7px 5px;font-size:11px}.hero{grid-template-columns:1fr;padding:58px 6%;gap:30px}h1{font-size:clamp(41px,10vw,56px);letter-spacing:-1.6px}.hero-card{padding:22px}.section{padding:58px 6%}.networks{grid-template-columns:repeat(2,1fr);gap:12px}.step-grid{grid-template-columns:1fr}.steps{padding:58px 6%}.callout{margin:38px 5%;padding:27px;display:block}.callout a{display:inline-flex;margin-top:18px}}
 @media(max-width:380px){nav a{font-size:10px;padding-left:3px;padding-right:3px}.buttons .btn{width:100%}.hero-card{padding:18px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* REFINED BRAND DETAILS + SERVICE PREVIEW */
+.hero{min-height:590px}
+.hero-card{position:relative;isolation:isolate;padding:0;overflow:visible;border-radius:24px;box-shadow:0 30px 75px #07132666}
+.hero-card:before{content:"";position:absolute;inset:13px -13px -13px 13px;border:1px solid #8ff0c744;border-radius:25px;z-index:-1}
+.preview-top{height:48px;padding:0 19px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #edf1f5;color:#8792a1;font-size:9px;font-weight:850;letter-spacing:1.1px}
+.preview-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#d7e2e9;margin-right:4px}
+.preview-menu{font-size:15px;letter-spacing:2px;color:#a5afbb}
+.preview-welcome{padding:25px 25px 13px}
+.preview-welcome h2{font-size:22px;line-height:1.2;letter-spacing:-.7px;margin:9px 0 5px}
+.preview-welcome p{font-size:12px;color:#8490a0}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:10px 22px 21px}
+.preview-service{position:relative;display:flex;flex-direction:column;align-items:flex-start;min-height:126px;padding:15px;border:1px solid #e9eef3;border-radius:14px;background:linear-gradient(145deg,#fff,#f9fbfd);transition:transform .2s,border-color .2s,box-shadow .2s}
+.preview-service:hover{transform:translateY(-3px);border-color:#a9dfc9;box-shadow:0 12px 24px #152b4310}
+.preview-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;font-size:19px;font-style:normal;font-weight:800;margin-bottom:12px}
+.data-icon{background:#e6f7f0;color:#087f5b}
+.airtime-icon{background:#fff4df;color:#bd7b16}
+.cable-icon{background:#edf0ff;color:#5967c9}
+.edu-icon{background:#f9eafa;color:#a34da7}
+.preview-service b{font-size:12px;color:#1b2b43}
+.preview-service small{font-size:10px;color:#8b96a5;margin-top:2px}
+.preview-service i{position:absolute;right:13px;top:13px;color:#91a0ad;font-style:normal;font-size:13px}
+.preview-bottom{display:flex;align-items:center;gap:10px;margin:0 22px 22px;padding:13px 14px;border-radius:12px;background:#f0f8f4}
+.preview-check{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#d8f3e6;color:#087f5b;font-weight:900}
+.preview-bottom b{display:block;font-size:10px;color:#315343}
+.preview-bottom small{display:block;font-size:9px;color:#84958d;margin-top:1px}
+.section{max-width:1280px;margin:0 auto}
+.network{position:relative;overflow:hidden}
+.network:before{content:"";display:block;width:30px;height:3px;border-radius:4px;background:#0c9b6d;margin:0 auto 15px}
+.steps{position:relative;overflow:hidden}
+.steps:before{content:"";position:absolute;left:-130px;top:-180px;width:340px;height:340px;border-radius:50%;background:#dce9f3;opacity:.55}
+.step-grid{position:relative;max-width:1120px;margin:0 auto}
+.callout{position:relative;overflow:hidden}
+.callout:after{content:"";position:absolute;width:220px;height:220px;border:1px solid #ffffff22;border-radius:50%;right:13%;top:-130px;box-shadow:0 0 0 25px #ffffff0b,0 0 0 50px #ffffff08;pointer-events:none}
+.callout>div,.callout>a{position:relative;z-index:1}
+@media(max-width:750px){.hero{min-height:0}.hero-card:before{inset:9px -7px -9px 7px}.preview-welcome{padding:22px 20px 10px}.preview-grid{padding:8px 17px 17px}.preview-bottom{margin:0 17px 17px}.preview-service{min-height:118px}}
+
 </style>
 </head>
 
@@ -149,39 +186,20 @@ a:focus-visible{outline:3px solid #24b98766;outline-offset:3px}
 </div>
 
 <div class="hero-card">
-<span class="tag">OUR SERVICES</span>
-<h2>What do you need today?</h2>
-
-<a href="data.html" class="service">
-<div><b>Mobile Data</b><small>Choose your preferred data bundle</small></div>
-<span class="arrow">→</span>
-</a>
-
-<a href="airtime.html" class="service">
-<div><b>Airtime Top-up</b><small>Recharge your mobile number</small></div>
-<span class="arrow">→</span>
-</a>
-
-<a href="cable-tv.html" class="service">
-<div><b>Cable TV</b><small>DStv, GOtv and StarTimes</small></div>
-<span class="arrow">→</span>
-</a>
-
-<a href="education.html" class="service">
-<div><b>Education PINs</b><small>WAEC, NECO and JAMB</small></div>
-<span class="arrow">→</span>
-</a>
-
-<div class="service coming">
-<div><b>Electricity Bill Payment</b><small>Coming Soon</small></div>
-<span class="soon">Soon</span>
+<div class="preview-top"><div><span class="preview-dot"></span><span class="preview-dot"></span><span class="preview-dot"></span></div><span>ORIKAEZE HUB</span><span class="preview-menu">•••</span></div>
+<div class="preview-welcome"><span class="tag">WELCOME TO YOUR HUB</span><h2>What would you like to do?</h2><p>Everyday digital services, all in one place.</p></div>
+<div class="preview-grid">
+<a href="data.html" class="preview-service"><span class="preview-icon data-icon">◈</span><b>Buy Data</b><small>Choose a bundle</small><i>↗</i></a>
+<a href="airtime.html" class="preview-service"><span class="preview-icon airtime-icon">ϟ</span><b>Airtime</b><small>Top up a line</small><i>↗</i></a>
+<a href="cable-tv.html" class="preview-service"><span class="preview-icon cable-icon">▣</span><b>Cable TV</b><small>Pay subscription</small><i>↗</i></a>
+<a href="education.html" class="preview-service"><span class="preview-icon edu-icon">✦</span><b>Education</b><small>Get exam PINs</small><i>↗</i></a>
 </div>
+<div class="preview-bottom"><span class="preview-check">✓</span><span><b>Simple. Convenient. Accessible.</b><small>Designed for your everyday needs.</small></span></div>
 </div>
 </section>
 
 <section class="section">
-<div class="tag">BUILT FOR EVERYDAY CONVENIENCE</div>
-<span class="tag">NETWORK OPTIONS</span>
+<div class="tag">NETWORK OPTIONS</div>
 <h2>Choose your network</h2>
 
 <div class="networks">
