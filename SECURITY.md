@@ -11,15 +11,24 @@
 - Founder admin sessions expire after 4 hours. Admin token storage in the admin page is session-scoped rather than persistent local storage.
 - Existing password hashing, hashed session tokens, Paystack signature verification, server-side order amount verification, and existing VTU flows are retained.
 
-## Required deployment step
+## Staging-first deployment
 
-Before deploying this branch to production, apply:
+Do not deploy this branch to the production Worker until the Preview has been tested.
 
-```sh
-npx wrangler d1 migrations apply orikaeze-data-hub-db --remote
-```
+1. The Preview binding must point to the separate D1 database `orikaeze-data-hub-staging`, never the production database.
+2. Copy the production database **schema only** (CREATE TABLE / CREATE INDEX statements, no customer or transaction rows) into the staging database. The application baseline schema is currently maintained in the existing production D1 database rather than in a complete initial migration file.
+3. Apply the repository migrations to the staging database using the separate migration config:
 
-This applies `migrations/0003_security_rate_limits.sql`. Do not deploy the Worker changes before the migration is applied: login and registration rate limiting depends on this table.
+   ```sh
+   npx wrangler d1 migrations apply PREVIEW_DB --remote --config wrangler.preview-migrations.toml
+   ```
+
+   This applies the admin-session and security-rate-limit tables. Do not point this command at the production database.
+4. In Cloudflare Settings, configure Preview Base secrets separately. Use a dedicated test administrator email/password. Do not copy live Paystack or MELE secrets into Preview; payment and provider delivery must not be tested with live credentials.
+5. Test Preview registration, customer login, admin login/session expiry behavior, and read-only API behavior. Confirm the Preview uses only the staging D1 database.
+6. Only after those checks pass should the changes be considered for production release.
+
+The production D1 database already has the `security_rate_limits` table, confirmed by the owner. Do not rerun migration 0003 manually against production. The existing production Worker remains unchanged until a reviewed release is deployed.
 
 ## Cloudflare dashboard hardening still required
 
@@ -36,4 +45,4 @@ These account-level controls cannot be safely changed through the repository:
 
 This is a security hardening baseline, not a guarantee that the service cannot be attacked. The marketplace is not implemented by these changes. Seller roles, product uploads, marketplace orders, and seller payouts must receive their own authorization and validation checks before those features launch.
 
-The D1 migration and Cloudflare dashboard controls are external deployment steps; creating this file or merging the branch does not apply them automatically.
+The Preview database and Cloudflare dashboard controls are external deployment steps. Creating this file or merging the branch does not apply them automatically.
