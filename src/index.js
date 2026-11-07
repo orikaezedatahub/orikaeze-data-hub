@@ -350,7 +350,7 @@ export default {
     // Serve a temporary login-test page there and send credentials only to the
     // isolated API Preview Worker. This route is unavailable on Production.
     if (
-      url.hostname === "marketplace-foundation-orikaeze-data-hub-site.eruakennethnnabuike.workers.dev" &&
+      url.hostname === "marketplace-foundation-orikaeze-data-hub.eruakennethnnabuike.workers.dev" &&
       url.pathname === "/admin.html" &&
       request.method === "GET"
     ) {
@@ -371,7 +371,7 @@ button{width:100%;margin-top:18px;padding:13px;background:#08764f;color:white;bo
 <label for="password">Preview admin password</label><input id="password" type="password" autocomplete="current-password" required>
 <button id="b" type="submit">Test Admin Login</button></form><div id="result" role="status"></div></main>
 <script>
-const API="https://marketplace-foundation-orikaeze-data-hub.eruakennethnnabuike.workers.dev";
+const API=location.origin;
 const form=document.getElementById("f"),button=document.getElementById("b"),result=document.getElementById("result");
 form.addEventListener("submit",async e=>{
  e.preventDefault();button.disabled=true;result.textContent="Checking Preview login…";
