@@ -20,6 +20,7 @@
 <footer><b>ORIKAEZE HUB</b><div>Powered by Orikaeze Media · IT CAN ONLY GET BETTER!</div><small>Marketplace orders are requests. Payment is confirmed by the platform owner before fulfilment.</small></footer>
 <script>
 const API="https://orikaeze-data-hub.eruakennethnnabuike.workers.dev";let allProducts=[],category="";
+function authToken(){try{const t=sessionStorage.getItem("odh_token");if(t)return t}catch(e){}try{return localStorage.getItem("odh_token")||""}catch(e){return ""}}
 const $=id=>document.getElementById(id),money=k=>new Intl.NumberFormat("en-NG",{style:"currency",currency:"NGN"}).format((Number(k)||0)/100);
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 async function load(){try{const r=await fetch(API+"/api/marketplace/products"),d=await r.json();if(!r.ok||!d.success)throw Error(d.message||"Catalogue unavailable");allProducts=d.products||[];render()}catch(e){$("products").innerHTML='<div class="empty"><b>Marketplace is temporarily unavailable</b><p>'+esc(e.message)+'</p><p>Please refresh and try again.</p></div>'}}
@@ -34,7 +35,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("orderOverlay").c
 function showOrderError(message){const old=$("orderError");if(old)old.remove();const box=document.createElement("div");box.id="orderError";box.className="order-error";box.textContent=message;$("orderContent").prepend(box)}
 function updateOrderTotal(){if(!activeOrderProduct)return;const q=Math.max(1,Math.min(20,Number($("orderQty")?.value)||1));$("orderQty").value=q;$("orderTotal").textContent=money(activeOrderProduct.price_kobo*q)}
 async function order(id){
- if(!localStorage.getItem("odh_token")){alert("Please log in or create an account before requesting an order.");location.href="https://orikaezedatahub.github.io/orikaeze-data-hub/marketplace-account.html";return}
+ const customerToken=authToken();if(!customerToken){alert("Please log in or create an account before requesting an order.");location.href="https://orikaezedatahub.github.io/orikaeze-data-hub/marketplace-account.html";return}
  const p=allProducts.find(x=>x.id===id);if(!p)return;
  if(Number(p.stock_quantity)<1){alert("Sorry, this product is currently out of stock.");return}
  activeOrderProduct=p;
@@ -53,7 +54,7 @@ async function submitCustomerOrder(e){
  const delivery="Customer name: "+fullName+"\nPhone: "+phone+"\nState: "+state+"\nCity/Town: "+city+"\nArea: "+area+"\nDelivery address: "+address;
  const btn=$("orderSubmit");btn.disabled=true;btn.textContent="Submitting order…";
  try{
-  const r=await fetch(API+"/api/marketplace/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+localStorage.getItem("odh_token")},body:JSON.stringify({productId:activeOrderProduct.id,quantity:qty,deliveryDetails:delivery,note})}),d=await r.json();
+  const r=await fetch(API+"/api/marketplace/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+authToken()},body:JSON.stringify({productId:activeOrderProduct.id,quantity:qty,deliveryDetails:delivery,note})}),d=await r.json();
   if(!r.ok||!d.success)throw Error(d.message||"Order request failed");
   const pay=d.payment_details||{},account=pay.bank_name&&pay.account_name&&pay.account_number?"Bank: "+pay.bank_name+"\nAccount name: "+pay.account_name+"\nAccount number: "+pay.account_number+"\n\nPayment narration: "+d.reference+(pay.instructions?"\n\nAdditional payment instructions: "+pay.instructions:"")+"\n\nTransfer only to this platform account. The owner will verify payment manually before processing your order.":"Payment details are not available yet. Do not transfer money. Contact the platform owner before making payment.";
   const supportMessage=encodeURIComponent("Hello ORIKAEZE HUB, I need help with my marketplace order "+d.reference+".");
