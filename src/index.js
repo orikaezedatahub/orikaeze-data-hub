@@ -605,7 +605,7 @@ export default {
         return reply({success:true,stats:{sellers:sellers.total,products:products.total,orders:orders.total,pending_payouts:payouts.total,commission_percent:Number(commission?.setting_value||0)}});
       }
       if (url.pathname === "/api/admin/marketplace/sellers" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT s.id,s.store_name,s.description,s.status,s.created_at,c.full_name,c.email,c.phone FROM marketplace_sellers s JOIN customers c ON c.id=s.user_id ORDER BY s.created_at DESC LIMIT 200").all();
+        const rows=await env.DB.prepare("SELECT s.id,s.store_name,s.description,s.bank_name,s.account_name,s.account_number,s.status,s.created_at,c.full_name,c.email,c.phone FROM marketplace_sellers s JOIN customers c ON c.id=s.user_id ORDER BY s.created_at DESC LIMIT 200").all();
         return reply({success:true,sellers:rows.results||[]});
       }
       if (url.pathname === "/api/admin/marketplace/seller-review" && request.method === "POST") {
@@ -690,12 +690,13 @@ export default {
       }
       if (url.pathname === "/api/marketplace/seller/apply" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
-        const storeName=clean(b.storeName),description=clean(b.description).slice(0,700);
+        const storeName=clean(b.storeName),description=clean(b.description).slice(0,700),bankName=clean(b.bankName),accountName=clean(b.accountName),accountNumber=clean(b.accountNumber);
         if(storeName.length<2||storeName.length>70)return reply({success:false,message:"Store name must be 2–70 characters."},400);
+        if(bankName.length<2||bankName.length>80||accountName.length<2||accountName.length>100||!/^\\d{10}$/.test(accountNumber))return reply({success:false,message:"Enter a valid bank name, account name and 10-digit account number."},400);
         if(seller)return reply({success:false,message:"A seller application already exists for this account."},409);
         const slug=storeName.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,55)+"-"+crypto.randomUUID().slice(0,6);
         const id=crypto.randomUUID();
-        await env.DB.prepare("INSERT INTO marketplace_sellers(id,user_id,store_name,store_slug,description,status) VALUES(?,?,?,?,?,'pending')").bind(id,user.id,storeName,slug,description).run();
+        await env.DB.prepare("INSERT INTO marketplace_sellers(id,user_id,store_name,store_slug,description,bank_name,account_name,account_number,status) VALUES(?,?,?,?,?,?,?,?, 'pending')").bind(id,user.id,storeName,slug,description,bankName,accountName,accountNumber).run();
         return reply({success:true,message:"Seller application submitted for owner review.",seller:{id,store_name:storeName,status:"pending"}},201);
       }
 
