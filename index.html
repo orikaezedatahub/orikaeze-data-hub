@@ -111,6 +111,26 @@ a:focus-visible{outline:3px solid #18b98780;outline-offset:3px}
 @media(max-width:760px){.site-header{height:auto;min-height:72px;padding:13px 5%;flex-wrap:wrap;gap:12px}.nav{order:3;width:100%;justify-content:space-between;gap:4px;overflow-x:auto;font-size:11px}.nav a{white-space:nowrap}.header-action{padding:10px 13px;font-size:11px}.brand-mark{width:39px;height:39px}.brand-name{font-size:14px}.hero{padding:45px 5% 52px}.hero-inner{grid-template-columns:1fr;gap:34px}.hero-copy{padding:0}.hero-visual{min-height:390px;margin:0 4px 0 0}.photo-frame{left:12px}.float-card{top:18px;left:0}.quick-card{right:-8px;bottom:17px}.services{padding:54px 5%}.service-grid{grid-template-columns:repeat(2,1fr)}.service-card{min-height:158px}.network-strip{padding:22px 5%}.network-inner{display:block;text-align:center}.networks{justify-content:center;flex-wrap:wrap;margin-top:13px;gap:24px;font-size:17px}.how{padding:58px 5%}.how-grid{grid-template-columns:1fr;gap:25px}.steps{grid-template-columns:1fr;gap:10px}.step{min-height:0;padding:16px}.step h3{margin:8px 0 4px}.cta{margin:0 5% 48px;padding:28px 24px;display:block}.cta a{display:inline-flex;margin-top:18px}}
 @media(max-width:390px){.hero-visual{min-height:340px}.quick-card{width:180px;padding:13px}.float-card{padding:12px}.float-card b{font-size:11px}.hero-actions .btn{width:100%}.networks{gap:17px;font-size:15px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
+
+/* Photo-led service highlights */
+.nav-market{color:#087b59!important;font-weight:950!important;background:#e8f8f1;padding:9px 12px;border-radius:9px;letter-spacing:.35px}
+.visual-services{max-width:1280px;margin:0 auto;padding:8px 7% 72px}
+.visual-heading{text-align:center;margin:0 auto 27px}
+.visual-heading h2{font-size:clamp(28px,3vw,38px);font-weight:950;letter-spacing:-1.2px;margin:8px 0}
+.visual-heading p{font-size:13px;color:var(--muted)}
+.visual-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.visual-card{min-height:320px;border-radius:22px;overflow:hidden;position:relative;display:flex;align-items:flex-end;background:#15243a;isolation:isolate;box-shadow:0 15px 35px #15243a15;transition:transform .2s,box-shadow .2s}
+.visual-card:hover{transform:translateY(-5px);box-shadow:0 22px 42px #15243a25}
+.visual-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform .4s}
+.visual-card:hover img{transform:scale(1.04)}
+.visual-card:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#101b32df 0%,#101b3270 58%,#101b3210 100%);z-index:-1}
+.visual-content{padding:30px;color:#fff;max-width:470px}
+.visual-tag{display:inline-block;background:#b9f36b;color:#14243b;border-radius:30px;padding:6px 11px;font-size:9px;font-weight:950;letter-spacing:1.1px;text-transform:uppercase}
+.visual-content h3{font-size:clamp(26px,3vw,36px);line-height:1.08;letter-spacing:-1px;font-weight:950;margin:14px 0 9px}
+.visual-content p{font-size:12px;line-height:1.7;color:#e0e8ef;max-width:340px}
+.visual-link{display:inline-flex;margin-top:17px;background:#fff;color:#101b32;padding:12px 17px;border-radius:10px;font-size:11px;font-weight:950}
+@media(max-width:760px){.visual-services{padding:0 5% 55px}.visual-grid{grid-template-columns:1fr;gap:14px}.visual-card{min-height:270px}.visual-content{padding:23px}.nav-market{padding:6px 8px}}
+
 </style>
 </head>
 <body>
@@ -119,7 +139,7 @@ a:focus-visible{outline:3px solid #18b98780;outline-offset:3px}
 <span class="brand-mark">O</span><span><span class="brand-name">ORIKAEZE HUB</span><span class="brand-sub">Powered by Orikaeze Media</span></span>
 </a>
 <nav class="nav" aria-label="Main navigation">
-<a href="index.html">Home</a><a href="data.html">Data</a><a href="airtime.html">Airtime</a><a href="cable-tv.html">Cable TV</a><a href="education.html">Education</a><a href="marketplace.html">Marketplace</a><a href="about.html">About</a>
+<a href="index.html">Home</a><a href="data.html">Data</a><a href="airtime.html">Airtime</a><a href="cable-tv.html">Cable TV</a><a href="education.html">Education</a><a class="nav-market" href="marketplace.html">MARKETPLACE</a><a href="about.html">About</a>
 </nav>
 <a class="header-action" href="account.html">My Account&nbsp; ↗</a>
 </header>
@@ -153,6 +173,21 @@ a:focus-visible{outline:3px solid #18b98780;outline-offset:3px}
 <a class="service-card" href="marketplace.html"><span class="service-symbol s-marketplace">▣</span><span class="service-arrow">↗</span><h3>Marketplace</h3><p>Shop products from approved sellers.</p></a>
 </div>
 </section>
+
+<section class="visual-services" aria-label="Explore data and marketplace">
+  <div class="visual-heading"><span class="kicker">More at ORIKAEZE HUB</span><h2>Everyday essentials. More ways to shop.</h2><p>Get connected with data or discover products in our marketplace.</p></div>
+  <div class="visual-grid">
+    <a class="visual-card" href="data.html">
+      <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&amp;fit=crop&amp;w=1200&amp;q=85" alt="Smartphone representing mobile data and connectivity" loading="lazy">
+      <div class="visual-content"><span class="visual-tag">Stay connected</span><h3>BUY DATA<br>WITH EASE.</h3><p>Choose a mobile data plan for your network and stay connected wherever the day takes you.</p><span class="visual-link">Explore Data Plans&nbsp; ↗</span></div>
+    </a>
+    <a class="visual-card" href="marketplace.html">
+      <img src="https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&amp;fit=crop&amp;w=1200&amp;q=85" alt="Retail shop with products displayed for customers" loading="lazy">
+      <div class="visual-content"><span class="visual-tag">Shop in one place</span><h3>WELCOME TO THE<br>MARKETPLACE.</h3><p>Discover products from approved sellers and shop conveniently on ORIKAEZE HUB.</p><span class="visual-link">VISIT MARKETPLACE&nbsp; ↗</span></div>
+    </a>
+  </div>
+</section>
+
 <section class="network-strip"><div class="network-inner"><div class="network-label">NETWORK OPTIONS</div><div class="networks"><span>MTN</span><span>Airtel</span><span>Glo</span><span>T2</span></div></div></section>
 <section class="how">
 <div class="how-grid">
