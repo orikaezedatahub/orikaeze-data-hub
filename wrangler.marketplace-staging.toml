@@ -1,0 +1,17 @@
+name = "marketplace-build-orikaeze-data-hub"
+main = "src/index.js"
+compatibility_date = "2026-11-02"
+workers_dev = true
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[vars]
+ALLOWED_ORIGIN = "https://orikaezedatahub.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "orikaeze-data-hub-staging"
+database_id = "c9ebe3e2-f5f5-44de-83c4-ae4d4528e7f6"
+migrations_dir = "migrations"
