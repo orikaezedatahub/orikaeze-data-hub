@@ -742,6 +742,20 @@ export default {
         const rows=await env.DB.prepare("SELECT id,title,description,category,price_kobo,stock_quantity,image_url,status,created_at FROM marketplace_products WHERE seller_id=? ORDER BY created_at DESC LIMIT 100").bind(seller.id).all();
         return reply({success:true,products:rows.results||[]});
       }
+      if (url.pathname === "/api/marketplace/seller/product-stock" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const id=clean(b.productId),stock=Number(b.stock);
+        if(!id||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Enter a valid stock quantity."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND seller_id=? AND status IN('pending','approved')").bind(stock,id,seller.id).run();
+        return result.meta.changes?reply({success:true,message:"Product stock updated."}):reply({success:false,message:"Product not found or no longer editable."},404);
+      }
+      if (url.pathname === "/api/marketplace/seller/product-archive" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const id=clean(b.productId);
+        if(!id)return reply({success:false,message:"Product is required."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_products SET status='archived',updated_at=CURRENT_TIMESTAMP WHERE id=? AND seller_id=? AND status IN('pending','approved','rejected')").bind(id,seller.id).run();
+        return result.meta.changes?reply({success:true,message:"Product archived and removed from the public catalogue."}):reply({success:false,message:"Product not found or already archived."},404);
+      }
       if (url.pathname === "/api/marketplace/seller/products" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
         const title=clean(b.title),description=clean(b.description),category=clean(b.category),price=Math.round(Number(b.priceNaira)*100),stock=Number(b.stock),image=clean(b.imageUrl);
