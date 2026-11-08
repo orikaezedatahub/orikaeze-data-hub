@@ -739,6 +739,10 @@ export default {
           env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_number'").first(),
           env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_instructions'").first()
         ]);
+        const platformBank=clean(bankName?.setting_value),platformAccount=clean(accountName?.setting_value),platformNumber=clean(accountNumber?.setting_value);
+        if(platformBank.length<2||platformAccount.length<2||!/^\\d{10}$/.test(platformNumber)){
+          return reply({success:false,message:"Marketplace payment details have not been configured yet. Please try again later."},503);
+        }
         const percent=Math.min(30,Math.max(0,Number(setting?.setting_value)||0));
         const commission=Math.round(total*percent/100),earning=total-commission;
         const id=crypto.randomUUID(),reference="OMK_"+crypto.randomUUID().replace(/-/g,"");
