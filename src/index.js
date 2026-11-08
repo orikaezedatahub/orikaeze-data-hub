@@ -595,14 +595,18 @@ export default {
 
       // Marketplace owner controls: protected by the existing sole-admin session.
       if (url.pathname === "/api/admin/marketplace/overview" && request.method === "GET") {
-        const [sellers,products,orders,payouts,commission]=await Promise.all([
+        const [sellers,products,orders,payouts,commission,bankName,accountName,accountNumber,paymentInstructions]=await Promise.all([
           env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_sellers").first(),
           env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_products").first(),
           env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_orders").first(),
           env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_payout_requests WHERE status='pending'").first(),
-          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='commission_percent'").first()
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='commission_percent'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_bank_name'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_name'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_number'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_instructions'").first()
         ]);
-        return reply({success:true,stats:{sellers:sellers.total,products:products.total,orders:orders.total,pending_payouts:payouts.total,commission_percent:Number(commission?.setting_value||0)}});
+        return reply({success:true,stats:{sellers:sellers.total,products:products.total,orders:orders.total,pending_payouts:payouts.total,commission_percent:Number(commission?.setting_value||0)},payment_details:{bank_name:bankName?.setting_value||"",account_name:accountName?.setting_value||"",account_number:accountNumber?.setting_value||"",instructions:paymentInstructions?.setting_value||""}});
       }
       if (url.pathname === "/api/admin/marketplace/sellers" && request.method === "GET") {
         const rows=await env.DB.prepare("SELECT s.id,s.store_name,s.description,s.bank_name,s.account_name,s.account_number,s.status,s.created_at,c.full_name,c.email,c.phone FROM marketplace_sellers s JOIN customers c ON c.id=s.user_id ORDER BY s.created_at DESC LIMIT 200").all();
@@ -666,6 +670,14 @@ export default {
         if(!Number.isFinite(rate)||rate<0||rate>30)return reply({success:false,message:"Commission must be between 0 and 30 percent."},400);
         await env.DB.prepare("INSERT INTO marketplace_settings(setting_key,setting_value,updated_at) VALUES('commission_percent',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(rate)).run();
         return reply({success:true,message:"Marketplace commission updated.",commission_percent:rate});
+      }
+      if (url.pathname === "/api/admin/marketplace/payment-details" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const bank=clean(b.bankName).slice(0,80),name=clean(b.accountName).slice(0,100),number=clean(b.accountNumber),instructions=clean(b.instructions).slice(0,500);
+        if(bank.length<2||name.length<2||!/^\\d{10}$/.test(number))return reply({success:false,message:"Enter a bank name, account name and valid 10-digit account number."},400);
+        const entries=[["payment_bank_name",bank],["payment_account_name",name],["payment_account_number",number],["payment_instructions",instructions]];
+        await env.DB.batch(entries.map(([key,value])=>env.DB.prepare("INSERT INTO marketplace_settings(setting_key,setting_value,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(key,value)));
+        return reply({success:true,message:"Marketplace payment details saved."});
       }
 
       return reply({success:false,message:"Admin route not found."},404);
@@ -733,7 +745,13 @@ export default {
           await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(quantity,product.id).run();
           throw error;
         }
-        return reply({success:true,message:"Your order request has been sent. The platform owner will confirm payment and next steps.",reference,total_kobo:total},201);
+        const [bankName,accountName,accountNumber,paymentInstructions]=await Promise.all([
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_bank_name'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_name'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_number'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_instructions'").first()
+        ]);
+        return reply({success:true,message:"Your order request has been sent. Transfer only to the platform account shown below and use your order reference as the payment narration. The owner will verify receipt before the seller can fulfil the order.",reference,total_kobo:total,payment_details:{bank_name:bankName?.setting_value||"",account_name:accountName?.setting_value||"",account_number:accountNumber?.setting_value||"",instructions:paymentInstructions?.setting_value||""}},201);
       }
 
       if (!seller || seller.status!=="approved") return reply({success:false,message:seller?.status==="pending"?"Your seller application is awaiting approval.":"An approved seller account is required."},403);
