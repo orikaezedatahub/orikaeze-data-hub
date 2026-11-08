@@ -754,7 +754,7 @@ export default {
         const order=await env.DB.prepare("SELECT payment_status,status FROM marketplace_orders WHERE reference=? AND seller_id=?").bind(reference,seller.id).first();
         if(!order)return reply({success:false,message:"Order not found."},404);
         if(status==="fulfilled"&&order.payment_status!=="paid")return reply({success:false,message:"The owner must confirm payment before an order can be fulfilled."},409);
-        if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);
+        if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);if(status==="cancelled"&&order.payment_status==="paid")return reply({success:false,message:"Paid orders must be cancelled by the platform owner so refunds can be reviewed."},409);
         await env.DB.prepare("UPDATE marketplace_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND seller_id=?").bind(status,reference,seller.id).run();
         if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+(SELECT quantity FROM marketplace_orders WHERE reference=?) WHERE id=(SELECT product_id FROM marketplace_orders WHERE reference=?)").bind(reference,reference).run();
         return reply({success:true,message:"Order status updated."});
