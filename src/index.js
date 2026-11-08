@@ -638,6 +638,8 @@ export default {
         if(!order)return reply({success:false,message:"Order not found."},404);
         if(status==="fulfilled"&&payment!=="paid")return reply({success:false,message:"Confirm payment before marking an order fulfilled."},409);
         if(order.status==="cancelled")return reply({success:false,message:"This order was already cancelled."},409);
+        if(order.status==="fulfilled"&&status==="cancelled")return reply({success:false,message:"A fulfilled order cannot be cancelled or restocked. Handle any customer issue separately."},409);
+        if(payment==="refunded"&&order.payment_status!=="paid")return reply({success:false,message:"Only a previously paid order can be marked refunded."},409);
         await env.DB.prepare("UPDATE marketplace_orders SET payment_status=?,status=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(payment,status,clean(b.adminNote).slice(0,500),ref).run();
         if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(order.quantity,order.product_id).run();
         return reply({success:true,message:"Marketplace order updated."});
