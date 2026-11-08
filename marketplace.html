@@ -56,7 +56,9 @@ async function submitCustomerOrder(e){
   const r=await fetch(API+"/api/marketplace/orders",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+localStorage.getItem("odh_token")},body:JSON.stringify({productId:activeOrderProduct.id,quantity:qty,deliveryDetails:delivery,note})}),d=await r.json();
   if(!r.ok||!d.success)throw Error(d.message||"Order request failed");
   const pay=d.payment_details||{},account=pay.bank_name&&pay.account_name&&pay.account_number?"Bank: "+pay.bank_name+"\nAccount name: "+pay.account_name+"\nAccount number: "+pay.account_number+"\n\nPayment narration: "+d.reference+(pay.instructions?"\n\nAdditional payment instructions: "+pay.instructions:"")+"\n\nTransfer only to this platform account. The owner will verify payment manually before processing your order.":"Payment details are not available yet. Do not transfer money. Contact the platform owner before making payment.";
-  $("orderContent").innerHTML='<div class="order-result"><h3>Order request submitted</h3>Your order reference: <b>'+esc(d.reference)+'</b>\nProduct: '+esc(activeOrderProduct.title)+'\nQuantity: '+qty+'\nTotal: '+money(d.total_kobo)+'\n\n'+esc(account)+'<br><button type="button" id="orderDone">Done</button></div>';
+  const supportMessage=encodeURIComponent("Hello ORIKAEZE HUB, I need help with my marketplace order "+d.reference+".");
+  const supportLink='<p style="margin:14px 0 0">Need help with this order? <a href="https://wa.me/2349048683395?text='+supportMessage+'" target="_blank" rel="noopener" style="color:#087b59;font-weight:800">Chat with ORIKAEZE HUB on WhatsApp: +2349048683395</a></p>';
+  $("orderContent").innerHTML='<div class="order-result"><h3>Order request submitted</h3>Your order reference: <b>'+esc(d.reference)+'</b>\nProduct: '+esc(activeOrderProduct.title)+'\nQuantity: '+qty+'\nTotal: '+money(d.total_kobo)+'\n\n'+esc(account)+supportLink+'<br><button type="button" id="orderDone">Done</button></div>';
   $("orderDone").onclick=closeOrder;
  }catch(err){showOrderError(err.message);btn.disabled=false;btn.textContent="Submit order request"}
 }
