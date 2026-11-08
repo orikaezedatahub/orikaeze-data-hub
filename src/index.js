@@ -637,7 +637,9 @@ export default {
         const order=await env.DB.prepare("SELECT * FROM marketplace_orders WHERE reference=?").bind(ref).first();
         if(!order)return reply({success:false,message:"Order not found."},404);
         if(status==="fulfilled"&&payment!=="paid")return reply({success:false,message:"Confirm payment before marking an order fulfilled."},409);
+        if(order.status==="cancelled")return reply({success:false,message:"This order was already cancelled."},409);
         await env.DB.prepare("UPDATE marketplace_orders SET payment_status=?,status=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(payment,status,clean(b.adminNote).slice(0,500),ref).run();
+        if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(order.quantity,order.product_id).run();
         return reply({success:true,message:"Marketplace order updated."});
       }
       if (url.pathname === "/api/admin/marketplace/payouts" && request.method === "GET") {
@@ -714,7 +716,15 @@ export default {
         const percent=Math.min(30,Math.max(0,Number(setting?.setting_value)||0));
         const commission=Math.round(total*percent/100),earning=total-commission;
         const id=crypto.randomUUID(),reference="OMK_"+crypto.randomUUID().replace(/-/g,"");
-        await env.DB.prepare("INSERT INTO marketplace_orders(id,reference,buyer_id,seller_id,product_id,quantity,unit_price_kobo,total_kobo,commission_kobo,seller_earning_kobo,delivery_details,buyer_note) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)").bind(id,reference,user.id,product.seller_id,product.id,quantity,product.price_kobo,total,commission,earning,delivery,note).run();
+        // Reserve stock atomically so concurrent buyers cannot over-order.
+        const reserved=await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity-?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status='approved' AND stock_quantity>=?").bind(quantity,product.id,quantity).run();
+        if(!reserved.meta.changes)return reply({success:false,message:"This item has just sold out. Please refresh the marketplace."},409);
+        try {
+          await env.DB.prepare("INSERT INTO marketplace_orders(id,reference,buyer_id,seller_id,product_id,quantity,unit_price_kobo,total_kobo,commission_kobo,seller_earning_kobo,delivery_details,buyer_note) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)").bind(id,reference,user.id,product.seller_id,product.id,quantity,product.price_kobo,total,commission,earning,delivery,note).run();
+        } catch(error) {
+          await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(quantity,product.id).run();
+          throw error;
+        }
         return reply({success:true,message:"Your order request has been sent. The platform owner will confirm payment and next steps.",reference,total_kobo:total},201);
       }
 
@@ -746,6 +756,7 @@ export default {
         if(status==="fulfilled"&&order.payment_status!=="paid")return reply({success:false,message:"The owner must confirm payment before an order can be fulfilled."},409);
         if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);
         await env.DB.prepare("UPDATE marketplace_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND seller_id=?").bind(status,reference,seller.id).run();
+        if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+(SELECT quantity FROM marketplace_orders WHERE reference=?) WHERE id=(SELECT product_id FROM marketplace_orders WHERE reference=?)").bind(reference,reference).run();
         return reply({success:true,message:"Order status updated."});
       }
       if (url.pathname === "/api/marketplace/seller/payout-request" && request.method === "POST") {
