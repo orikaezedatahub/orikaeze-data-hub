@@ -68,3 +68,13 @@ jobs:
           seller_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$BASE/api/marketplace/seller/me")"
           test "$seller_status" = "401"
           echo "Seller API protection: OK (unauthenticated request rejected)"
+          node <<'NODE'
+          const fs = require('node:fs');
+          for (const file of ['marketplace.html','seller.html','marketplace-admin.html','account.html']) {
+            const html = fs.readFileSync('public/' + file, 'utf8');
+            const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+            if (!scripts.length) throw new Error(file + ': no inline script found');
+            for (const script of scripts) new Function(script[1]);
+            console.log('Browser script syntax: ' + file + ' OK');
+          }
+          NODE
