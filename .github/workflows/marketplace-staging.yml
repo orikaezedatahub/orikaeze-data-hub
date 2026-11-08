@@ -76,7 +76,7 @@ jobs:
             const html = fs.readFileSync('public/' + file, 'utf8');
             const scripts = html.split('<script>').slice(1).map(part => part.split('</script>')[0]);
             if (!scripts.length) throw new Error(file + ': no inline script found');
-            for (const script of scripts) new Function(script[1]);
+            for (const script of scripts) new Function(script);
             console.log('Browser script syntax: ' + file + ' OK');
           }
           NODE
