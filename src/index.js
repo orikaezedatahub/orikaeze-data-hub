@@ -696,6 +696,28 @@ export default {
         await env.DB.prepare("INSERT INTO marketplace_sellers(id,user_id,store_name,store_slug,description,status) VALUES(?,?,?,?,?,'pending')").bind(id,user.id,storeName,slug,description).run();
         return reply({success:true,message:"Seller application submitted for owner review.",seller:{id,store_name:storeName,status:"pending"}},201);
       }
+
+      if (url.pathname === "/api/marketplace/orders" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT o.reference,o.quantity,o.total_kobo,o.payment_status,o.status,o.delivery_details,o.created_at,p.title,s.store_name FROM marketplace_orders o JOIN marketplace_products p ON p.id=o.product_id JOIN marketplace_sellers s ON s.id=o.seller_id WHERE o.buyer_id=? ORDER BY o.created_at DESC LIMIT 100").bind(user.id).all();
+        return reply({success:true,orders:rows.results||[]});
+      }
+      if (url.pathname === "/api/marketplace/orders" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const productId=clean(b.productId),quantity=Number(b.quantity),delivery=clean(b.deliveryDetails).slice(0,500),note=clean(b.note).slice(0,500);
+        if(!productId||!Number.isInteger(quantity)||quantity<1||quantity>20||delivery.length<8)return reply({success:false,message:"Enter a valid quantity and delivery/contact details."},400);
+        const product=await env.DB.prepare("SELECT p.*,s.status AS seller_status FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id WHERE p.id=? AND p.status='approved'").bind(productId).first();
+        if(!product||product.seller_status!=="approved")return reply({success:false,message:"This product is no longer available."},404);
+        if(product.stock_quantity<quantity)return reply({success:false,message:"There is not enough stock for this quantity."},409);
+        const total=product.price_kobo*quantity;
+        if(!Number.isSafeInteger(total)||total<=0)return reply({success:false,message:"Invalid order amount."},400);
+        const setting=await env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='commission_percent'").first();
+        const percent=Math.min(30,Math.max(0,Number(setting?.setting_value)||0));
+        const commission=Math.round(total*percent/100),earning=total-commission;
+        const id=crypto.randomUUID(),reference="OMK_"+crypto.randomUUID().replace(/-/g,"");
+        await env.DB.prepare("INSERT INTO marketplace_orders(id,reference,buyer_id,seller_id,product_id,quantity,unit_price_kobo,total_kobo,commission_kobo,seller_earning_kobo,delivery_details,buyer_note) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)").bind(id,reference,user.id,product.seller_id,product.id,quantity,product.price_kobo,total,commission,earning,delivery,note).run();
+        return reply({success:true,message:"Your order request has been sent. The platform owner will confirm payment and next steps.",reference,total_kobo:total},201);
+      }
+
       if (!seller || seller.status!=="approved") return reply({success:false,message:seller?.status==="pending"?"Your seller application is awaiting approval.":"An approved seller account is required."},403);
 
       if (url.pathname === "/api/marketplace/seller/products" && request.method === "GET") {
