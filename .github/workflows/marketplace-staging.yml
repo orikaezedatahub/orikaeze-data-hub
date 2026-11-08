@@ -43,3 +43,7 @@ jobs:
           node -e "const x=require('./health.json'); if(x.success!==true) process.exit(1); console.log('Health endpoint: OK')"
           curl --fail --silent --show-error "$BASE/api/marketplace/products" -o products.json
           node -e "const x=require('./products.json'); if(x.success!==true || !Array.isArray(x.products)) process.exit(1); console.log('Public catalogue endpoint: OK; products:', x.products.length)"
+          for page in marketplace.html seller.html marketplace-admin.html account.html; do
+            curl --fail --silent --show-error "$BASE/$page" -o /dev/null
+            echo "Staging page: $page OK"
+          done
