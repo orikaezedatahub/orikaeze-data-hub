@@ -620,9 +620,17 @@ export default {
         return result.meta.changes?reply({success:true,message:"Seller status updated."}):reply({success:false,message:"Seller not found."},404);
       }
       if (url.pathname === "/api/admin/marketplace/products" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT p.id,p.title,p.category,p.price_kobo,p.stock_quantity,p.status,p.created_at,s.store_name FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id ORDER BY p.created_at DESC LIMIT 250").all();
+        const rows=await env.DB.prepare("SELECT p.id,p.title,p.category,p.price_kobo,p.stock_quantity,p.status,p.image_url,p.created_at,s.store_name FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id ORDER BY p.created_at DESC LIMIT 250").all();
         const products=(rows.results||[]).map(p=>({...p,image_url:p.image_url?new URL("/api/marketplace/product-image?id="+encodeURIComponent(p.id),url.origin).toString():""}));
       return reply({success:true,products});
+      }
+      if (url.pathname === "/api/admin/marketplace/product-image" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const id=clean(b.productId),image=String(b.imageData||"");
+        if(!id||id.length>100)return reply({success:false,message:"Invalid product."},400);
+        if(image.length>500000||!/^data:image\/(?:webp|jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(image))return reply({success:false,message:"Choose a valid JPG, PNG or WebP image under 350 KB."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_products SET image_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(image,id).run();
+        return result.meta.changes?reply({success:true,message:"Product picture updated successfully."}):reply({success:false,message:"Product not found."},404);
       }
       if (url.pathname === "/api/admin/marketplace/product-review" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
