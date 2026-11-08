@@ -1,0 +1,40 @@
+name: Marketplace staging deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out marketplace branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/marketplace-build
+
+      - name: Apply marketplace migrations to staging D1
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply orikaeze-data-hub-staging --remote --config wrangler.marketplace-staging.toml
+
+      - name: Deploy isolated staging Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.marketplace-staging.toml
+
+      - name: Smoke-test staging Worker and public catalogue
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://marketplace-build-orikaeze-data-hub.eruakennethnnabuike.workers.dev"
+          curl --fail --silent --show-error "$BASE/api/health" -o health.json
+          node -e "const x=require('./health.json'); if(x.success!==true) process.exit(1); console.log('Health endpoint: OK')"
+          curl --fail --silent --show-error "$BASE/api/marketplace/products" -o products.json
+          node -e "const x=require('./products.json'); if(x.success!==true || !Array.isArray(x.products)) process.exit(1); console.log('Public catalogue endpoint: OK; products:', x.products.length)"
