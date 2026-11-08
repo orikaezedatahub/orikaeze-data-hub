@@ -10,7 +10,30 @@ $("form").onsubmit=async e=>{e.preventDefault();$("submit").disabled=true;try{co
 async function dashboard(){const u=await api("/api/auth/me",null,"GET");$("hello").textContent="Hello, "+u.user.full_name;$("auth").classList.add("hidden");$("dash").classList.remove("hidden");await refresh();await loadPlans()}
 async function refresh(){const d=await api("/api/wallet",null,"GET");$("balance").textContent=cash(d.balance_kobo);$("rows").replaceChildren();for(const x of d.transactions){const tr=document.createElement("tr");[new Date(x.created_at.replace(" ","T")+"Z").toLocaleDateString(),x.description,(x.type==="credit"?"+":"−")+cash(x.amount_kobo),x.status].forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===2)td.className=x.type;tr.append(td)});$("rows").append(tr)}if(!d.transactions.length)$("rows").innerHTML="<tr><td colspan='4'>No transactions yet.</td></tr>"}
 async function loadPlans(){try{const d=await(await fetch(API+"/api/plans")).json();plans=d.plans||[];fillPlans()}catch{$("plan").innerHTML="<option>Plans unavailable</option>"}}
-function fillPlans(){const list=plans.filter(p=>String(p.network).toUpperCase()===$("network").value);$("plan").replaceChildren();list.forEach(p=>{const o=document.createElement("option");o.value=p.plan_id;o.textContent=(p.plan_name||p.data_size||"Data plan")+" — "+cash(Number(p.price)*100);$("plan").append(o)})}
+function formatPlanValidity(p){
+const fields=[p.validity,p.validity_period,p.duration,p.plan_validity,p.period,p.validity_days,p.days,p.day];
+for(const value of fields){
+if(value===undefined||value===null||String(value).trim()==="")continue;
+const raw=String(value).trim();
+const s=raw.toLowerCase();
+let m=s.match(/(\d+)\s*(days?|d)\b/);
+if(m)return m[1]+" "+(Number(m[1])===1?"Day":"Days");
+m=s.match(/(\d+)\s*(weeks?|wks?|wk)\b/);
+if(m)return m[1]+" "+(Number(m[1])===1?"Week":"Weeks");
+m=s.match(/(\d+)\s*(months?|mos?)\b/);
+if(m)return m[1]+" "+(Number(m[1])===1?"Month":"Months");
+m=s.match(/(\d+)\s*(years?|yrs?)\b/);
+if(m)return m[1]+" "+(Number(m[1])===1?"Year":"Years");
+if(/^\d+$/.test(s))return s+" Days";
+if(/daily|24\s*hours?/.test(s))return "1 Day";
+if(/weekly/.test(s))return "1 Week";
+if(/monthly/.test(s))return "1 Month";
+if(/yearly|annually/.test(s))return "1 Year";
+return raw;
+}
+return "Validity unavailable";
+}
+function fillPlans(){const list=plans.filter(p=>String(p.network).toUpperCase()===$("network").value);$("plan").replaceChildren();list.forEach(p=>{const o=document.createElement("option");o.value=p.plan_id;const validity=formatPlanValidity(p);o.textContent=(p.plan_name||p.data_size||"Data plan")+" ("+validity+") — "+cash(Number(p.price)*100);$("plan").append(o)})}
 $("network").onchange=fillPlans;$("service").onchange=()=>{$("planBox").classList.toggle("hidden",$("service").value!=="data");$("airBox").classList.toggle("hidden",$("service").value!=="airtime")};
 $("fundBtn").onclick=async()=>{try{const d=await api("/api/wallet/initialize-topup",{amount:Number($("fund").value)});location.href=d.authorization_url}catch(e){alert(e.message)}};
 $("buy").onclick=async()=>{const service=$("service").value,b={service,network:$("network").value,phone:$("recipient").value,productId:$("plan").value,amount:Number($("airAmount").value)};if(!/^0[789][01]\d{8}$/.test(b.phone)){alert("Enter a valid Nigerian phone number.");return}if(service==="data"&&!b.productId){alert("Choose a data plan.");return}if(service==="airtime"&&(!Number.isInteger(b.amount)||b.amount<100)){alert("Enter valid airtime amount.");return}if(!confirm("Proceed with this wallet purchase?"))return;try{const d=await api("/api/wallet/purchase",b);alert(d.message);await refresh()}catch(e){alert(e.message);await refresh()}};
