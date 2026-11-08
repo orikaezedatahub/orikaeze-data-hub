@@ -49,10 +49,14 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://orikaeze-data-hub.eruakennethnnabuike.workers.dev"
+          sleep 5
           curl --fail --silent --show-error "$BASE/api/health" -o health.json
           node -e "const x=require('./health.json'); if(x.success!==true) process.exit(1); console.log('Production health: OK')"
-          curl --fail --silent --show-error "$BASE/api/marketplace/products" -o products.json
+          code="$(curl --silent --show-error --output products.json --write-out '%{http_code}' "$BASE/api/marketplace/products")"
+          echo "Marketplace catalogue HTTP status: $code"
+          cat products.json
+          test "$code" = "200"
           node -e "const x=require('./products.json'); if(x.success!==true || !Array.isArray(x.products)) process.exit(1); console.log('Production marketplace API: OK; products:',x.products.length)"
-          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$BASE/api/admin/me")"
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$BASE/api/admin/marketplace/overview")"
           test "$status" = "401"
-          echo "Production admin protection: OK"
+          echo "Marketplace owner API protection: OK"
