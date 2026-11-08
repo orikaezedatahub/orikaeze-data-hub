@@ -1,0 +1,50 @@
+name: ORIKAEZE HUB production deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply additive marketplace migrations to production D1
+        uses: cloudflare/wrangler-action@v3
+        with:
+          wranglerVersion: "4"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply orikaeze-data-hub-db --remote --config wrangler.toml
+
+      - name: Deploy production API Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          wranglerVersion: "4"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.toml
+
+      - name: Verify production API and marketplace catalogue
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://orikaeze-data-hub.eruakennethnnabuike.workers.dev"
+          curl --fail --silent --show-error "$BASE/api/health" -o health.json
+          node -e "const x=require('./health.json'); if(x.success!==true) process.exit(1); console.log('Production health: OK')"
+          curl --fail --silent --show-error "$BASE/api/marketplace/products" -o products.json
+          node -e "const x=require('./products.json'); if(x.success!==true || !Array.isArray(x.products)) process.exit(1); console.log('Production marketplace API: OK; products:',x.products.length)"
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$BASE/api/admin/me")"
+          test "$status" = "401"
+          echo "Production admin protection: OK"
