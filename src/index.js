@@ -694,9 +694,9 @@ export default {
       const row = await env.DB.prepare("SELECT p.image_url FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id WHERE p.id=? AND p.status='approved' AND s.status='approved'").bind(productId).first();
       if (!row || !row.image_url) return new Response("Image not found.", {status:404});
       const image = String(row.image_url);
-      const match = /^data:image\\/(webp|jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image);
+      const match = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image);
       if (!match) {
-        if (/^https:\\/\\//i.test(image)) return Response.redirect(image, 302);
+        if (/^https:\/\//i.test(image)) return Response.redirect(image, 302);
         return new Response("Invalid product image.", {status:415});
       }
       let binary;
