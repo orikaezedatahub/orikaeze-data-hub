@@ -782,7 +782,7 @@ export default {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
         const title=clean(b.title),description=clean(b.description),category=clean(b.category),price=Math.round(Number(b.priceNaira)*100),stock=Number(b.stock),image=clean(b.imageUrl);
         if(title.length<3||title.length>100||description.length<10||description.length>2500||category.length<2||category.length>50||!Number.isSafeInteger(price)||price<10000||price>100000000||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Check the product details, price and stock quantity."},400);
-        if(image && (!/^https:\/\//i.test(image)||image.length>1000))return reply({success:false,message:"Product image must use a valid HTTPS link."},400);
+        if(image && (image.length>500000||!/^data:image\/(?:webp|jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)))return reply({success:false,message:"Choose a valid product photo. Please select it from your phone again."},400);
         const id=crypto.randomUUID();
         await env.DB.prepare("INSERT INTO marketplace_products(id,seller_id,title,description,category,price_kobo,stock_quantity,image_url,status) VALUES(?,?,?,?,?,?,?,?,'pending')").bind(id,seller.id,title,description,category,price,stock,image).run();
         return reply({success:true,message:"Product submitted for owner approval.",product_id:id},201);
