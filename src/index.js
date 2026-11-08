@@ -621,7 +621,8 @@ export default {
       }
       if (url.pathname === "/api/admin/marketplace/products" && request.method === "GET") {
         const rows=await env.DB.prepare("SELECT p.id,p.title,p.category,p.price_kobo,p.stock_quantity,p.status,p.created_at,s.store_name FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id ORDER BY p.created_at DESC LIMIT 250").all();
-        return reply({success:true,products:rows.results||[]});
+        const products=(rows.results||[]).map(p=>({...p,image_url:p.image_url?new URL("/api/marketplace/product-image?id="+encodeURIComponent(p.id),url.origin).toString():""}));
+      return reply({success:true,products});
       }
       if (url.pathname === "/api/admin/marketplace/product-review" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
@@ -685,6 +686,31 @@ export default {
       return reply({success:false,message:"Admin route not found."},404);
     }
 
+
+    // Public product-image endpoint. Serve stored data-URI photos as real image bytes so browsers can load them cross-origin from GitHub Pages.
+    if (url.pathname === "/api/marketplace/product-image" && request.method === "GET") {
+      const productId = clean(url.searchParams.get("id"));
+      if (!productId || productId.length > 100) return new Response("Image not found.", {status:404});
+      const row = await env.DB.prepare("SELECT p.image_url FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id WHERE p.id=? AND p.status='approved' AND s.status='approved'").bind(productId).first();
+      if (!row || !row.image_url) return new Response("Image not found.", {status:404});
+      const image = String(row.image_url);
+      const match = /^data:image\\/(webp|jpeg|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image);
+      if (!match) {
+        if (/^https:\\/\\//i.test(image)) return Response.redirect(image, 302);
+        return new Response("Invalid product image.", {status:415});
+      }
+      let binary;
+      try { binary = atob(match[2]); } catch { return new Response("Invalid product image.", {status:415}); }
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      return new Response(bytes, {status:200, headers:{
+        "Content-Type":"image/"+match[1],
+        "Content-Length":String(bytes.byteLength),
+        "Cache-Control":"public, max-age=3600, s-maxage=86400",
+        "X-Content-Type-Options":"nosniff",
+        "Cross-Origin-Resource-Policy":"cross-origin",
+        "Access-Control-Allow-Origin":"*"
+      }});
+    }
 
     // Marketplace routes are isolated from the existing data/airtime order and wallet flows.
     if (url.pathname === "/api/marketplace/products" && request.method === "GET") {
