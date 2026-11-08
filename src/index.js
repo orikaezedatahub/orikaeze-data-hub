@@ -592,7 +592,156 @@ export default {
         `).all();
         return reply({ success: true, activity: rows.results || [] });
       }
+
+      // Marketplace owner controls: protected by the existing sole-admin session.
+      if (url.pathname === "/api/admin/marketplace/overview" && request.method === "GET") {
+        const [sellers,products,orders,payouts,commission]=await Promise.all([
+          env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_sellers").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_products").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_orders").first(),
+          env.DB.prepare("SELECT COUNT(*) AS total FROM marketplace_payout_requests WHERE status='pending'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='commission_percent'").first()
+        ]);
+        return reply({success:true,stats:{sellers:sellers.total,products:products.total,orders:orders.total,pending_payouts:payouts.total,commission_percent:Number(commission?.setting_value||0)}});
+      }
+      if (url.pathname === "/api/admin/marketplace/sellers" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT s.id,s.store_name,s.description,s.status,s.created_at,c.full_name,c.email,c.phone FROM marketplace_sellers s JOIN customers c ON c.id=s.user_id ORDER BY s.created_at DESC LIMIT 200").all();
+        return reply({success:true,sellers:rows.results||[]});
+      }
+      if (url.pathname === "/api/admin/marketplace/seller-review" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const status=clean(b.status),id=clean(b.sellerId);
+        if(!["approved","rejected","suspended"].includes(status)||!id)return reply({success:false,message:"Invalid seller review."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_sellers SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,id).run();
+        return result.meta.changes?reply({success:true,message:"Seller status updated."}):reply({success:false,message:"Seller not found."},404);
+      }
+      if (url.pathname === "/api/admin/marketplace/products" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT p.id,p.title,p.category,p.price_kobo,p.stock_quantity,p.status,p.created_at,s.store_name FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id ORDER BY p.created_at DESC LIMIT 250").all();
+        return reply({success:true,products:rows.results||[]});
+      }
+      if (url.pathname === "/api/admin/marketplace/product-review" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const status=clean(b.status),id=clean(b.productId);
+        if(!["approved","rejected","archived"].includes(status)||!id)return reply({success:false,message:"Invalid product review."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_products SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,id).run();
+        return result.meta.changes?reply({success:true,message:"Product status updated."}):reply({success:false,message:"Product not found."},404);
+      }
+      if (url.pathname === "/api/admin/marketplace/orders" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT o.id,o.reference,o.quantity,o.total_kobo,o.commission_kobo,o.seller_earning_kobo,o.payment_status,o.status,o.delivery_details,o.buyer_note,o.admin_note,o.created_at,p.title,s.store_name,c.full_name,c.email,c.phone FROM marketplace_orders o JOIN marketplace_products p ON p.id=o.product_id JOIN marketplace_sellers s ON s.id=o.seller_id JOIN customers c ON c.id=o.buyer_id ORDER BY o.created_at DESC LIMIT 250").all();
+        return reply({success:true,orders:rows.results||[]});
+      }
+      if (url.pathname === "/api/admin/marketplace/order-review" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const ref=clean(b.reference),payment=clean(b.paymentStatus),status=clean(b.status);
+        if(!ref||!["unpaid","paid","refunded"].includes(payment)||!["requested","accepted","processing","fulfilled","cancelled"].includes(status))return reply({success:false,message:"Invalid order update."},400);
+        const order=await env.DB.prepare("SELECT * FROM marketplace_orders WHERE reference=?").bind(ref).first();
+        if(!order)return reply({success:false,message:"Order not found."},404);
+        if(status==="fulfilled"&&payment!=="paid")return reply({success:false,message:"Confirm payment before marking an order fulfilled."},409);
+        await env.DB.prepare("UPDATE marketplace_orders SET payment_status=?,status=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(payment,status,clean(b.adminNote).slice(0,500),ref).run();
+        return reply({success:true,message:"Marketplace order updated."});
+      }
+      if (url.pathname === "/api/admin/marketplace/payouts" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT p.id,p.amount_kobo,p.status,p.payout_reference,p.admin_note,p.created_at,s.store_name,c.full_name,c.email FROM marketplace_payout_requests p JOIN marketplace_sellers s ON s.id=p.seller_id JOIN customers c ON c.id=s.user_id ORDER BY p.created_at DESC LIMIT 200").all();
+        return reply({success:true,payouts:rows.results||[]});
+      }
+      if (url.pathname === "/api/admin/marketplace/payout-review" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const id=clean(b.payoutId),status=clean(b.status),reference=clean(b.payoutReference);
+        if(!id||!["approved","paid","rejected"].includes(status)||(status==="paid"&&!reference))return reply({success:false,message:"A payout reference is required when marking a payout paid."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_payout_requests SET status=?,payout_reference=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN('pending','approved')").bind(status,reference,clean(b.adminNote).slice(0,500),id).run();
+        return result.meta.changes?reply({success:true,message:"Payout status updated."}):reply({success:false,message:"Payout request not found or already closed."},404);
+      }
+      if (url.pathname === "/api/admin/marketplace/commission" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const rate=Number(b.percent);
+        if(!Number.isFinite(rate)||rate<0||rate>30)return reply({success:false,message:"Commission must be between 0 and 30 percent."},400);
+        await env.DB.prepare("INSERT INTO marketplace_settings(setting_key,setting_value,updated_at) VALUES('commission_percent',?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(String(rate)).run();
+        return reply({success:true,message:"Marketplace commission updated.",commission_percent:rate});
+      }
+
       return reply({success:false,message:"Admin route not found."},404);
+    }
+
+
+    // Marketplace routes are isolated from the existing data/airtime order and wallet flows.
+    if (url.pathname === "/api/marketplace/products" && request.method === "GET") {
+      const category = clean(url.searchParams.get("category"));
+      const search = clean(url.searchParams.get("q")).slice(0,80);
+      const rows = await env.DB.prepare(`
+        SELECT p.id,p.title,p.description,p.category,p.price_kobo,p.stock_quantity,p.image_url,p.created_at,s.store_name
+        FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id
+        WHERE p.status='approved' AND s.status='approved' AND p.stock_quantity>0
+          AND (?='' OR p.category=?)
+          AND (?='' OR p.title LIKE '%'||?||'%' OR p.description LIKE '%'||?||'%')
+        ORDER BY p.created_at DESC LIMIT 100
+      `).bind(category,category,search,search,search).all();
+      return reply({success:true,products:rows.results||[]});
+    }
+
+    if (url.pathname.startsWith("/api/marketplace/")) {
+      const user = await sessionUser(request,env);
+      if (!user) return reply({success:false,message:"Please log in to use the marketplace."},401);
+      const seller = await env.DB.prepare("SELECT * FROM marketplace_sellers WHERE user_id=?").bind(user.id).first();
+
+      if (url.pathname === "/api/marketplace/seller/me" && request.method === "GET") {
+        return reply({success:true,seller:seller||null});
+      }
+      if (url.pathname === "/api/marketplace/seller/apply" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const storeName=clean(b.storeName),description=clean(b.description).slice(0,700);
+        if(storeName.length<2||storeName.length>70)return reply({success:false,message:"Store name must be 2–70 characters."},400);
+        if(seller)return reply({success:false,message:"A seller application already exists for this account."},409);
+        const slug=storeName.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,55)+"-"+crypto.randomUUID().slice(0,6);
+        const id=crypto.randomUUID();
+        await env.DB.prepare("INSERT INTO marketplace_sellers(id,user_id,store_name,store_slug,description,status) VALUES(?,?,?,?,?,'pending')").bind(id,user.id,storeName,slug,description).run();
+        return reply({success:true,message:"Seller application submitted for owner review.",seller:{id,store_name:storeName,status:"pending"}},201);
+      }
+      if (!seller || seller.status!=="approved") return reply({success:false,message:seller?.status==="pending"?"Your seller application is awaiting approval.":"An approved seller account is required."},403);
+
+      if (url.pathname === "/api/marketplace/seller/products" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT id,title,description,category,price_kobo,stock_quantity,image_url,status,created_at FROM marketplace_products WHERE seller_id=? ORDER BY created_at DESC LIMIT 100").bind(seller.id).all();
+        return reply({success:true,products:rows.results||[]});
+      }
+      if (url.pathname === "/api/marketplace/seller/products" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const title=clean(b.title),description=clean(b.description),category=clean(b.category),price=Math.round(Number(b.priceNaira)*100),stock=Number(b.stock),image=clean(b.imageUrl);
+        if(title.length<3||title.length>100||description.length<10||description.length>2500||category.length<2||category.length>50||!Number.isSafeInteger(price)||price<10000||price>100000000||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Check the product details, price and stock quantity."},400);
+        if(image && (!/^https:\/\//i.test(image)||image.length>1000))return reply({success:false,message:"Product image must use a valid HTTPS link."},400);
+        const id=crypto.randomUUID();
+        await env.DB.prepare("INSERT INTO marketplace_products(id,seller_id,title,description,category,price_kobo,stock_quantity,image_url,status) VALUES(?,?,?,?,?,?,?,?,'pending')").bind(id,seller.id,title,description,category,price,stock,image).run();
+        return reply({success:true,message:"Product submitted for owner approval.",product_id:id},201);
+      }
+      if (url.pathname === "/api/marketplace/seller/orders" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT o.id,o.reference,o.quantity,o.total_kobo,o.commission_kobo,o.seller_earning_kobo,o.payment_status,o.status,o.delivery_details,o.buyer_note,o.created_at,p.title,c.full_name,c.phone FROM marketplace_orders o JOIN marketplace_products p ON p.id=o.product_id JOIN customers c ON c.id=o.buyer_id WHERE o.seller_id=? ORDER BY o.created_at DESC LIMIT 100").bind(seller.id).all();
+        return reply({success:true,orders:rows.results||[]});
+      }
+      if (url.pathname === "/api/marketplace/seller/order-status" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const reference=clean(b.reference),status=clean(b.status);
+        if(!["accepted","processing","fulfilled","cancelled"].includes(status))return reply({success:false,message:"Invalid order status."},400);
+        const order=await env.DB.prepare("SELECT payment_status,status FROM marketplace_orders WHERE reference=? AND seller_id=?").bind(reference,seller.id).first();
+        if(!order)return reply({success:false,message:"Order not found."},404);
+        if(status==="fulfilled"&&order.payment_status!=="paid")return reply({success:false,message:"The owner must confirm payment before an order can be fulfilled."},409);
+        if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);
+        await env.DB.prepare("UPDATE marketplace_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND seller_id=?").bind(status,reference,seller.id).run();
+        return reply({success:true,message:"Order status updated."});
+      }
+      if (url.pathname === "/api/marketplace/seller/payout-request" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const amount=Math.round(Number(b.amountNaira)*100);
+        if(!Number.isSafeInteger(amount)||amount<10000)return reply({success:false,message:"Minimum payout request is ₦100."},400);
+        const earned=await env.DB.prepare("SELECT COALESCE(SUM(seller_earning_kobo),0) AS total FROM marketplace_orders WHERE seller_id=? AND payment_status='paid' AND status='fulfilled'").bind(seller.id).first();
+        const paid=await env.DB.prepare("SELECT COALESCE(SUM(amount_kobo),0) AS total FROM marketplace_payout_requests WHERE seller_id=? AND status IN('approved','paid')").bind(seller.id).first();
+        const pending=await env.DB.prepare("SELECT COALESCE(SUM(amount_kobo),0) AS total FROM marketplace_payout_requests WHERE seller_id=? AND status='pending'").bind(seller.id).first();
+        const available=(earned?.total||0)-(paid?.total||0)-(pending?.total||0);
+        if(amount>available)return reply({success:false,message:"Payout request exceeds your available earnings."},409);
+        await env.DB.prepare("INSERT INTO marketplace_payout_requests(id,seller_id,amount_kobo) VALUES(?,?,?)").bind(crypto.randomUUID(),seller.id,amount).run();
+        return reply({success:true,message:"Payout request sent to the platform owner."},201);
+      }
+      if (url.pathname === "/api/marketplace/seller/payouts" && request.method === "GET") {
+        const rows=await env.DB.prepare("SELECT id,amount_kobo,status,payout_reference,admin_note,created_at FROM marketplace_payout_requests WHERE seller_id=? ORDER BY created_at DESC LIMIT 50").bind(seller.id).all();
+        return reply({success:true,payouts:rows.results||[]});
+      }
     }
 
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
