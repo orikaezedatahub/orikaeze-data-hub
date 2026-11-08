@@ -674,7 +674,7 @@ export default {
       if (url.pathname === "/api/admin/marketplace/payment-details" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
         const bank=clean(b.bankName).slice(0,80),name=clean(b.accountName).slice(0,100),number=clean(b.accountNumber),instructions=clean(b.instructions).slice(0,500);
-        if(bank.length<2||name.length<2||!/^\\d{10}$/.test(number))return reply({success:false,message:"Enter a bank name, account name and valid 10-digit account number."},400);
+        if(bank.length<2||name.length<2||!/^\d{10}$/.test(number))return reply({success:false,message:"Enter a bank name, account name and valid 10-digit account number."},400);
         const entries=[["payment_bank_name",bank],["payment_account_name",name],["payment_account_number",number],["payment_instructions",instructions]];
         await env.DB.batch(entries.map(([key,value])=>env.DB.prepare("INSERT INTO marketplace_settings(setting_key,setting_value,updated_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(key,value)));
         return reply({success:true,message:"Marketplace payment details saved."});
@@ -711,7 +711,7 @@ export default {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
         const storeName=clean(b.storeName),description=clean(b.description).slice(0,700),bankName=clean(b.bankName),accountName=clean(b.accountName),accountNumber=clean(b.accountNumber);
         if(storeName.length<2||storeName.length>70)return reply({success:false,message:"Store name must be 2–70 characters."},400);
-        if(bankName.length<2||bankName.length>80||accountName.length<2||accountName.length>100||!/^\\d{10}$/.test(accountNumber))return reply({success:false,message:"Enter a valid bank name, account name and 10-digit account number."},400);
+        if(bankName.length<2||bankName.length>80||accountName.length<2||accountName.length>100||!/^\d{10}$/.test(accountNumber))return reply({success:false,message:"Enter a valid bank name, account name and 10-digit account number."},400);
         if(seller)return reply({success:false,message:"A seller application already exists for this account."},409);
         const slug=storeName.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,55)+"-"+crypto.randomUUID().slice(0,6);
         const id=crypto.randomUUID();
@@ -740,7 +740,7 @@ export default {
           env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_instructions'").first()
         ]);
         const platformBank=clean(bankName?.setting_value),platformAccount=clean(accountName?.setting_value),platformNumber=clean(accountNumber?.setting_value);
-        if(platformBank.length<2||platformAccount.length<2||!/^\\d{10}$/.test(platformNumber)){
+        if(platformBank.length<2||platformAccount.length<2||!/^\d{10}$/.test(platformNumber)){
           return reply({success:false,message:"Marketplace payment details have not been configured yet. Please try again later."},503);
         }
         const percent=Math.min(30,Math.max(0,Number(setting?.setting_value)||0));
