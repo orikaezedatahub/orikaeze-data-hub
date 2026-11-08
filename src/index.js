@@ -649,7 +649,9 @@ export default {
         if(status==="cancelled"&&order.payment_status==="paid"&&payment!=="refunded")return reply({success:false,message:"Refund the customer first, then record the refund and cancel the order."},409);
         if(status==="cancelled"&&order.payment_status==="unpaid"&&payment!=="unpaid")return reply({success:false,message:"An unpaid order cannot be recorded as refunded."},409);
         if(payment==="refunded"&&status!=="cancelled")return reply({success:false,message:"Record a refund only when cancelling the order."},409);
-        await env.DB.prepare("UPDATE marketplace_orders SET payment_status=?,status=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(payment,status,clean(b.adminNote).slice(0,500),ref).run();
+        const changed=await env.DB.prepare("UPDATE marketplace_orders SET payment_status=?,status=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND status!='fulfilled'").bind(payment,status,clean(b.adminNote).slice(0,500),ref).run();
+        if(!changed.meta.changes)return reply({success:false,message:"This order has already been updated. Refresh and try again."},409);
+        if(status==="fulfilled")await env.DB.prepare("UPDATE marketplace_products SET sales_count=sales_count+? WHERE id=?").bind(order.quantity,order.product_id).run();
         if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(order.quantity,order.product_id).run();
         return reply({success:true,message:"Marketplace order updated."});
       }
@@ -689,7 +691,7 @@ export default {
       const category = clean(url.searchParams.get("category"));
       const search = clean(url.searchParams.get("q")).slice(0,80);
       const rows = await env.DB.prepare(`
-        SELECT p.id,p.title,p.description,p.category,p.price_kobo,p.stock_quantity,p.image_url,p.created_at,s.store_name
+        SELECT p.id,p.title,p.description,p.category,p.price_kobo,p.original_price_kobo,p.stock_quantity,p.sales_count,p.image_url,p.created_at,s.store_name
         FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id
         WHERE p.status='approved' AND s.status='approved' AND p.stock_quantity>0
           AND (?='' OR p.category=?)
@@ -761,7 +763,7 @@ export default {
       if (!seller || seller.status!=="approved") return reply({success:false,message:seller?.status==="pending"?"Your seller application is awaiting approval.":"An approved seller account is required."},403);
 
       if (url.pathname === "/api/marketplace/seller/products" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT id,title,description,category,price_kobo,stock_quantity,image_url,status,created_at FROM marketplace_products WHERE seller_id=? ORDER BY created_at DESC LIMIT 100").bind(seller.id).all();
+        const rows=await env.DB.prepare("SELECT id,title,description,category,price_kobo,original_price_kobo,stock_quantity,sales_count,image_url,status,created_at FROM marketplace_products WHERE seller_id=? ORDER BY created_at DESC LIMIT 100").bind(seller.id).all();
         return reply({success:true,products:rows.results||[]});
       }
       if (url.pathname === "/api/marketplace/seller/product-stock" && request.method === "POST") {
@@ -780,11 +782,11 @@ export default {
       }
       if (url.pathname === "/api/marketplace/seller/products" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
-        const title=clean(b.title),description=clean(b.description),category=clean(b.category),price=Math.round(Number(b.priceNaira)*100),stock=Number(b.stock),image=clean(b.imageUrl);
-        if(title.length<3||title.length>100||description.length<10||description.length>2500||category.length<2||category.length>50||!Number.isSafeInteger(price)||price<10000||price>100000000||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Check the product details, price and stock quantity."},400);
+        const title=clean(b.title),description=clean(b.description),category=clean(b.category),price=Math.round(Number(b.priceNaira)*100),originalPrice=clean(b.originalPriceNaira)===""?null:Math.round(Number(b.originalPriceNaira)*100),stock=Number(b.stock),image=clean(b.imageUrl);
+        if(title.length<3||title.length>100||description.length<10||description.length>2500||category.length<2||category.length>50||!Number.isSafeInteger(price)||price<10000||price>100000000||(originalPrice!==null&&(!Number.isSafeInteger(originalPrice)||originalPrice<=price||originalPrice>100000000))||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Check the product details, original price and stock quantity."},400);
         if(image && (image.length>500000||!/^data:image\/(?:webp|jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)))return reply({success:false,message:"Choose a valid product photo. Please select it from your phone again."},400);
         const id=crypto.randomUUID();
-        await env.DB.prepare("INSERT INTO marketplace_products(id,seller_id,title,description,category,price_kobo,stock_quantity,image_url,status) VALUES(?,?,?,?,?,?,?,?,'pending')").bind(id,seller.id,title,description,category,price,stock,image).run();
+        await env.DB.prepare("INSERT INTO marketplace_products(id,seller_id,title,description,category,price_kobo,original_price_kobo,stock_quantity,image_url,status) VALUES(?,?,?,?,?,?,?,?,?,'pending')").bind(id,seller.id,title,description,category,price,originalPrice,stock,image).run();
         return reply({success:true,message:"Product submitted for owner approval.",product_id:id},201);
       }
       if (url.pathname === "/api/marketplace/seller/orders" && request.method === "GET") {
@@ -800,7 +802,9 @@ export default {
         if(["accepted","processing","fulfilled"].includes(status)&&order.payment_status!=="paid")return reply({success:false,message:"The owner must confirm payment before you can accept or process this order."},409);
         if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);
         if(status==="cancelled"&&order.payment_status==="paid")return reply({success:false,message:"Paid orders must be cancelled by the platform owner so refunds can be reviewed."},409);
-        await env.DB.prepare("UPDATE marketplace_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND seller_id=?").bind(status,reference,seller.id).run();
+        const changed=await env.DB.prepare("UPDATE marketplace_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND seller_id=? AND status NOT IN('cancelled','fulfilled')").bind(status,reference,seller.id).run();
+        if(!changed.meta.changes)return reply({success:false,message:"This order has already been updated. Refresh and try again."},409);
+        if(status==="fulfilled")await env.DB.prepare("UPDATE marketplace_products SET sales_count=sales_count+? WHERE id=(SELECT product_id FROM marketplace_orders WHERE reference=?)").bind(order.quantity,reference).run();
         if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+(SELECT quantity FROM marketplace_orders WHERE reference=?) WHERE id=(SELECT product_id FROM marketplace_orders WHERE reference=?)").bind(reference,reference).run();
         return reply({success:true,message:"Order status updated."});
       }
