@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS marketplace_sellers (
   store_name TEXT NOT NULL,
   store_slug TEXT NOT NULL UNIQUE,
   description TEXT NOT NULL DEFAULT '',
+  bank_name TEXT NOT NULL,
+  account_name TEXT NOT NULL,
+  account_number TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','suspended')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
