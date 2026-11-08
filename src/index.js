@@ -631,7 +631,7 @@ export default {
         return result.meta.changes?reply({success:true,message:"Product status updated."}):reply({success:false,message:"Product not found."},404);
       }
       if (url.pathname === "/api/admin/marketplace/orders" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT o.id,o.reference,o.quantity,o.total_kobo,o.commission_kobo,o.seller_earning_kobo,o.payment_status,o.status,o.delivery_details,o.buyer_note,o.admin_note,o.created_at,p.title,s.store_name,c.full_name,c.email,c.phone FROM marketplace_orders o JOIN marketplace_products p ON p.id=o.product_id JOIN marketplace_sellers s ON s.id=o.seller_id JOIN customers c ON c.id=o.buyer_id ORDER BY o.created_at DESC LIMIT 250").all();
+        const rows=await env.DB.prepare("SELECT o.id,o.reference,o.quantity,o.total_kobo,o.commission_kobo,o.seller_earning_kobo,o.payment_status,o.status,o.delivery_details,o.buyer_note,o.admin_note,o.created_at,COALESCE(p.title,'Product record unavailable') AS title,COALESCE(s.store_name,'Seller record unavailable') AS store_name,COALESCE(c.full_name,'Customer record unavailable') AS full_name,COALESCE(c.email,'') AS email,COALESCE(c.phone,'') AS phone FROM marketplace_orders o LEFT JOIN marketplace_products p ON p.id=o.product_id LEFT JOIN marketplace_sellers s ON s.id=o.seller_id LEFT JOIN customers c ON c.id=o.buyer_id ORDER BY o.created_at DESC LIMIT 250").all();
         return reply({success:true,orders:rows.results||[]});
       }
       if (url.pathname === "/api/admin/marketplace/order-review" && request.method === "POST") {
