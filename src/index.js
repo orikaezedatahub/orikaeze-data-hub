@@ -722,7 +722,7 @@ export default {
       }
 
       if (url.pathname === "/api/marketplace/orders" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT o.reference,o.quantity,o.total_kobo,o.payment_status,o.status,o.delivery_details,o.created_at,p.title,s.store_name FROM marketplace_orders o JOIN marketplace_products p ON p.id=o.product_id JOIN marketplace_sellers s ON s.id=o.seller_id WHERE o.buyer_id=? ORDER BY o.created_at DESC LIMIT 100").bind(user.id).all();
+        const rows=await env.DB.prepare("SELECT o.reference,o.quantity,o.unit_price_kobo,o.total_kobo,o.payment_status,o.status,o.delivery_details,o.created_at,p.title,p.image_url,s.store_name FROM marketplace_orders o JOIN marketplace_products p ON p.id=o.product_id JOIN marketplace_sellers s ON s.id=o.seller_id WHERE o.buyer_id=? ORDER BY o.created_at DESC LIMIT 100").bind(user.id).all();
         return reply({success:true,orders:rows.results||[]});
       }
       if (url.pathname === "/api/marketplace/orders" && request.method === "POST") {
