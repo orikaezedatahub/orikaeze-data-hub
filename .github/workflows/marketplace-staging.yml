@@ -26,12 +26,16 @@ jobs:
       - name: Apply marketplace migrations to staging D1
         uses: cloudflare/wrangler-action@v3
         with:
+          wranglerVersion: "4"
+        with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply orikaeze-data-hub-staging --remote --config wrangler.marketplace-staging.toml
 
       - name: Deploy isolated staging Worker
         uses: cloudflare/wrangler-action@v3
+        with:
+          wranglerVersion: "4"
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -72,7 +76,7 @@ jobs:
           const fs = require('node:fs');
           for (const file of ['marketplace.html','seller.html','marketplace-admin.html','account.html']) {
             const html = fs.readFileSync('public/' + file, 'utf8');
-            const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+            const scripts = html.split('<script>').slice(1).map(part => part.split('</script>')[0]);
             if (!scripts.length) throw new Error(file + ': no inline script found');
             for (const script of scripts) new Function(script[1]);
             console.log('Browser script syntax: ' + file + ' OK');
