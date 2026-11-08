@@ -636,13 +636,14 @@ export default {
         if(!ref||!["unpaid","paid","refunded"].includes(payment)||!["requested","accepted","processing","fulfilled","cancelled"].includes(status))return reply({success:false,message:"Invalid order update."},400);
         const order=await env.DB.prepare("SELECT * FROM marketplace_orders WHERE reference=?").bind(ref).first();
         if(!order)return reply({success:false,message:"Order not found."},404);
-        if(status==="fulfilled"&&payment!=="paid")return reply({success:false,message:"Confirm payment before marking an order fulfilled."},409);
+        if(["accepted","processing","fulfilled"].includes(status)&&payment!=="paid")return reply({success:false,message:"Confirm customer payment before accepting or processing an order."},409);
         if(order.status==="cancelled")return reply({success:false,message:"This order was already cancelled."},409);
-        if(order.status==="fulfilled"&&status==="cancelled")return reply({success:false,message:"A fulfilled order cannot be cancelled or restocked. Handle any customer issue separately."},409);
+        if(order.status==="fulfilled"&&status!=="fulfilled")return reply({success:false,message:"A fulfilled order is closed and cannot be changed."},409);
         if(payment==="refunded"&&order.payment_status!=="paid")return reply({success:false,message:"Only a previously paid order can be marked refunded."},409);
         if(order.payment_status==="paid"&&payment==="unpaid")return reply({success:false,message:"A confirmed payment cannot be changed back to unpaid."},409);
         if(order.payment_status==="refunded"&&payment!=="refunded")return reply({success:false,message:"A refunded order cannot be marked paid again."},409);
         if(status==="cancelled"&&order.payment_status==="paid"&&payment!=="refunded")return reply({success:false,message:"Refund the customer first, then record the refund and cancel the order."},409);
+        if(status==="cancelled"&&order.payment_status==="unpaid"&&payment!=="unpaid")return reply({success:false,message:"An unpaid order cannot be recorded as refunded."},409);
         if(payment==="refunded"&&status!=="cancelled")return reply({success:false,message:"Record a refund only when cancelling the order."},409);
         await env.DB.prepare("UPDATE marketplace_orders SET payment_status=?,status=?,admin_note=?,updated_at=CURRENT_TIMESTAMP WHERE reference=?").bind(payment,status,clean(b.adminNote).slice(0,500),ref).run();
         if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(order.quantity,order.product_id).run();
@@ -760,8 +761,9 @@ export default {
         if(!["accepted","processing","fulfilled","cancelled"].includes(status))return reply({success:false,message:"Invalid order status."},400);
         const order=await env.DB.prepare("SELECT payment_status,status FROM marketplace_orders WHERE reference=? AND seller_id=?").bind(reference,seller.id).first();
         if(!order)return reply({success:false,message:"Order not found."},404);
-        if(status==="fulfilled"&&order.payment_status!=="paid")return reply({success:false,message:"The owner must confirm payment before an order can be fulfilled."},409);
-        if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);if(status==="cancelled"&&order.payment_status==="paid")return reply({success:false,message:"Paid orders must be cancelled by the platform owner so refunds can be reviewed."},409);
+        if(["accepted","processing","fulfilled"].includes(status)&&order.payment_status!=="paid")return reply({success:false,message:"The owner must confirm payment before you can accept or process this order."},409);
+        if(order.status==="cancelled"||order.status==="fulfilled")return reply({success:false,message:"This order can no longer be changed."},409);
+        if(status==="cancelled"&&order.payment_status==="paid")return reply({success:false,message:"Paid orders must be cancelled by the platform owner so refunds can be reviewed."},409);
         await env.DB.prepare("UPDATE marketplace_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE reference=? AND seller_id=?").bind(status,reference,seller.id).run();
         if(status==="cancelled")await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+(SELECT quantity FROM marketplace_orders WHERE reference=?) WHERE id=(SELECT product_id FROM marketplace_orders WHERE reference=?)").bind(reference,reference).run();
         return reply({success:true,message:"Order status updated."});
