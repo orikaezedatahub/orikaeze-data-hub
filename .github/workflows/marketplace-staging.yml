@@ -2,6 +2,9 @@ name: Marketplace staging deployment
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/marketplace-build
 
 permissions:
   contents: read
@@ -14,6 +17,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: feature/marketplace-build
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Apply marketplace migrations to staging D1
         uses: cloudflare/wrangler-action@v3
@@ -29,6 +37,18 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --config wrangler.marketplace-staging.toml
 
+      - name: Configure isolated marketplace owner credentials when supplied
+        if: ${{ env.MARKETPLACE_ADMIN_EMAIL != '' && env.MARKETPLACE_ADMIN_PASSWORD != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MARKETPLACE_ADMIN_EMAIL: ${{ secrets.MARKETPLACE_ADMIN_EMAIL }}
+          MARKETPLACE_ADMIN_PASSWORD: ${{ secrets.MARKETPLACE_ADMIN_PASSWORD }}
+        shell: bash
+        run: |
+          printf '%s' "$MARKETPLACE_ADMIN_EMAIL" | npx --yes wrangler@4 secret put ADMIN_EMAIL --config wrangler.marketplace-staging.toml
+          printf '%s' "$MARKETPLACE_ADMIN_PASSWORD" | npx --yes wrangler@4 secret put ADMIN_PASSWORD --config wrangler.marketplace-staging.toml
+
       - name: Smoke-test staging Worker and public catalogue
         shell: bash
         run: |
@@ -38,3 +58,13 @@ jobs:
           node -e "const x=require('./health.json'); if(x.success!==true) process.exit(1); console.log('Health endpoint: OK')"
           curl --fail --silent --show-error "$BASE/api/marketplace/products" -o products.json
           node -e "const x=require('./products.json'); if(x.success!==true || !Array.isArray(x.products)) process.exit(1); console.log('Public catalogue endpoint: OK; products:', x.products.length)"
+          for page in marketplace.html seller.html marketplace-admin.html account.html; do
+            curl --fail --silent --show-error "$BASE/$page" -o /dev/null
+            echo "Staging page: $page OK"
+          done
+          admin_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$BASE/api/admin/me")"
+          test "$admin_status" = "401"
+          echo "Owner API protection: OK (unauthenticated request rejected)"
+          seller_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$BASE/api/marketplace/seller/me")"
+          test "$seller_status" = "401"
+          echo "Seller API protection: OK (unauthenticated request rejected)"
