@@ -733,6 +733,12 @@ export default {
         const total=product.price_kobo*quantity;
         if(!Number.isSafeInteger(total)||total<=0)return reply({success:false,message:"Invalid order amount."},400);
         const setting=await env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='commission_percent'").first();
+        const [bankName,accountName,accountNumber,paymentInstructions]=await Promise.all([
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_bank_name'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_name'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_number'").first(),
+          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_instructions'").first()
+        ]);
         const percent=Math.min(30,Math.max(0,Number(setting?.setting_value)||0));
         const commission=Math.round(total*percent/100),earning=total-commission;
         const id=crypto.randomUUID(),reference="OMK_"+crypto.randomUUID().replace(/-/g,"");
@@ -745,12 +751,6 @@ export default {
           await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=stock_quantity+? WHERE id=?").bind(quantity,product.id).run();
           throw error;
         }
-        const [bankName,accountName,accountNumber,paymentInstructions]=await Promise.all([
-          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_bank_name'").first(),
-          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_name'").first(),
-          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_account_number'").first(),
-          env.DB.prepare("SELECT setting_value FROM marketplace_settings WHERE setting_key='payment_instructions'").first()
-        ]);
         return reply({success:true,message:"Your order request has been sent. Transfer only to the platform account shown below and use your order reference as the payment narration. The owner will verify receipt before the seller can fulfil the order.",reference,total_kobo:total,payment_details:{bank_name:bankName?.setting_value||"",account_name:accountName?.setting_value||"",account_number:accountNumber?.setting_value||"",instructions:paymentInstructions?.setting_value||""}},201);
       }
 
