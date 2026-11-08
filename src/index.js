@@ -643,7 +643,7 @@ export default {
         return reply({success:true,message:"Marketplace order updated."});
       }
       if (url.pathname === "/api/admin/marketplace/payouts" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT p.id,p.amount_kobo,p.status,p.payout_reference,p.admin_note,p.created_at,s.store_name,c.full_name,c.email FROM marketplace_payout_requests p JOIN marketplace_sellers s ON s.id=p.seller_id JOIN customers c ON c.id=s.user_id ORDER BY p.created_at DESC LIMIT 200").all();
+        const rows=await env.DB.prepare("SELECT p.id,p.amount_kobo,p.status,p.payout_reference,p.admin_note,p.created_at,s.store_name,s.bank_name,s.account_name,s.account_number,c.full_name,c.email FROM marketplace_payout_requests p JOIN marketplace_sellers s ON s.id=p.seller_id JOIN customers c ON c.id=s.user_id ORDER BY p.created_at DESC LIMIT 200").all();
         return reply({success:true,payouts:rows.results||[]});
       }
       if (url.pathname === "/api/admin/marketplace/payout-review" && request.method === "POST") {
