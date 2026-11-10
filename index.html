@@ -112,6 +112,14 @@ a:focus-visible{outline:3px solid #18b98780;outline-offset:3px}
 @media(max-width:390px){.hero-visual{min-height:340px}.quick-card{width:180px;padding:13px}.float-card{padding:12px}.float-card b{font-size:11px}.hero-actions .btn{width:100%}.networks{gap:17px;font-size:15px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important}}
 
+/* Homepage support and shopping confidence */
+.home-support{max-width:1280px;margin:0 auto;padding:0 7% 68px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.support-card{background:#fff;border:1px solid var(--line);border-radius:17px;padding:23px 24px}
+.support-card h3{font-size:16px;margin-bottom:7px}
+.support-card p{font-size:12px;color:var(--muted);line-height:1.75}
+.support-card a{display:inline-flex;margin-top:13px;background:#e8f8f1;color:#087b59;padding:10px 14px;border-radius:9px;font-size:11px;font-weight:900}
+@media(max-width:760px){.home-support{padding:0 5% 55px;grid-template-columns:1fr}}
+
 /* Photo-led service highlights */
 .nav-market{color:#087b59!important;font-weight:950!important;background:#e8f8f1;padding:9px 12px;border-radius:9px;letter-spacing:.35px}
 .visual-services{max-width:1280px;margin:0 auto;padding:8px 7% 72px}
@@ -163,10 +171,10 @@ body{padding-left:264px!important}
 <a class="hub-side-brand" href="index.html"><span class="hub-side-mark">O</span><span><strong>ORIKAEZE HUB</strong><small>Powered by Orikaeze Media</small></span></a>
 <nav aria-label="Main navigation"><a href="index.html" aria-current="page">Home</a>
 <a href="data.html">Data</a>
+<a href="marketplace.html">Marketplace</a>
 <a href="airtime.html">Airtime</a>
 <a href="cable-tv.html">Cable TV</a>
 <a href="education.html">Education</a>
-<a href="marketplace.html">Marketplace</a>
 <a href="about.html">About</a>
 <a href="contact.html">Contact Us</a></nav>
 <a class="hub-side-account" href="account.html">My Account ↗</a>
@@ -187,7 +195,7 @@ body{padding-left:264px!important}
 <div class="photo-caption"><strong>Everything feels easier when it connects.</strong><span>Your digital essentials, in one place.</span></div>
 </div>
 <div class="float-card"><span class="float-icon">✦</span><span><b>Welcome to your hub</b><small>Simple digital convenience</small></span></div>
-<div class="quick-card"><div class="quick-head">QUICK ACCESS</div><a class="quick-link" href="data.html"><span>Mobile Data</span><span>↗</span></a><a class="quick-link" href="airtime.html"><span>Airtime Top-up</span><span>↗</span></a><a class="quick-link" href="cable-tv.html"><span>Cable TV</span><span>↗</span></a><a class="quick-link" href="education.html"><span>Education PINs</span><span>↗</span></a><a class="quick-link" href="marketplace.html"><span>Marketplace</span><span>↗</span></a></div>
+<div class="quick-card"><div class="quick-head">QUICK ACCESS</div><a class="quick-link" href="data.html"><span>Mobile Data</span><span>↗</span></a><a class="quick-link" href="marketplace.html"><span>Marketplace</span><span>↗</span></a><a class="quick-link" href="airtime.html"><span>Airtime Top-up</span><span>↗</span></a><a class="quick-link" href="cable-tv.html"><span>Cable TV</span><span>↗</span></a><a class="quick-link" href="education.html"><span>Education PINs</span><span>↗</span></a></div>
 </div>
 </div>
 </section>
@@ -195,11 +203,16 @@ body{padding-left:264px!important}
 <div class="section-heading"><span class="kicker">Explore ORIKAEZE HUB</span><h2>What do you need today?</h2><p>Choose a service and get started in just a few steps.</p></div>
 <div class="service-grid">
 <a class="service-card" href="data.html"><span class="service-symbol s-data">◈</span><span class="service-arrow">↗</span><h3>Buy Mobile Data</h3><p>Find a data plan for your network.</p></a>
+<a class="service-card" href="marketplace.html"><span class="service-symbol s-marketplace">▣</span><span class="service-arrow">↗</span><h3>Marketplace</h3><p>Shop products from approved sellers.</p></a>
 <a class="service-card" href="airtime.html"><span class="service-symbol s-airtime">ϟ</span><span class="service-arrow">↗</span><h3>Buy Airtime</h3><p>Top up your mobile line.</p></a>
 <a class="service-card" href="cable-tv.html"><span class="service-symbol s-cable">▣</span><span class="service-arrow">↗</span><h3>Cable TV</h3><p>Explore TV subscription options.</p></a>
 <a class="service-card" href="education.html"><span class="service-symbol s-edu">✧</span><span class="service-arrow">↗</span><h3>Education</h3><p>Explore available exam PIN services.</p></a>
-<a class="service-card" href="marketplace.html"><span class="service-symbol s-marketplace">▣</span><span class="service-arrow">↗</span><h3>Marketplace</h3><p>Shop products from approved sellers.</p></a>
 </div>
+</section>
+
+<section class="home-support" aria-label="Shopping information and customer support">
+  <div class="support-card"><h3>Shopping with confidence</h3><p>Delivery costs are already included in the product prices displayed on ORIKAEZE HUB. You will not be charged a separate delivery fee at checkout.</p></div>
+  <div class="support-card"><h3>Need help with your order?</h3><p>Contact our support team if you need assistance before or after placing an order.</p><a href="https://wa.me/2349048683395" target="_blank" rel="noopener">Chat with us on WhatsApp&nbsp; ↗</a></div>
 </section>
 
 <section class="visual-services" aria-label="Explore data and marketplace">
