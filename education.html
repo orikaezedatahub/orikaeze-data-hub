@@ -49,13 +49,43 @@ footer strong{letter-spacing:.5px;color:var(--hub-green)}
 @media(max-width:750px){header{gap:12px}.brand strong{font-size:14px}nav a{padding:6px 5px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
 
-</style></head><body><header>
-<a class="brand" href="index.html"><strong>ORIKAEZE HUB</strong><small>Powered by Orikaeze Media</small></a>
-<nav>
-<a href="index.html">Home</a><a href="data.html">Data</a><a href="airtime.html">Airtime</a><a href="cable-tv.html">Cable TV</a><a href="education.html">Education</a><a href="about.html">About</a>
-</nav>
-<a class="home" href="index.html">Dashboard</a>
-</header>
+
+/* ORIKAEZE HUB left navigation */
+body{padding-left:264px!important}
+.hub-sidebar{position:fixed;inset:0 auto 0 0;width:264px;z-index:1000;background:#101b32;color:#e8eef5;padding:25px 18px;display:flex;flex-direction:column;gap:28px;box-shadow:8px 0 28px rgba(16,27,50,.12);overflow-y:auto}
+.hub-side-brand{display:flex;align-items:center;gap:11px;padding:4px 8px 22px;border-bottom:1px solid #ffffff20;color:#fff}
+.hub-side-mark{width:42px;height:42px;flex:0 0 42px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#19bd87,#087b5a);font-size:22px;font-weight:900}
+.hub-side-brand strong{display:block;font-size:14px;letter-spacing:.6px}
+.hub-side-brand small{display:block;color:#aebccd;font-size:10px;margin-top:3px}
+.hub-sidebar nav{display:flex!important;flex-direction:column;align-items:stretch!important;gap:6px!important;width:100%;font-size:13px!important;font-weight:750;color:#c5d0dd;overflow:visible!important}
+.hub-sidebar nav a{display:block;padding:12px 13px;border-radius:9px;white-space:normal!important;transition:background .18s,color .18s}
+.hub-sidebar nav a:hover,.hub-sidebar nav a[aria-current=page]{background:#ffffff16;color:#b9f36b!important}
+.hub-side-account{display:block;margin-top:auto;background:#12a878;color:#fff;padding:13px 15px;border-radius:10px;text-align:center;font-size:12px;font-weight:850}
+.hub-menu-toggle,.hub-sidebar-backdrop{display:none}
+@media(max-width:760px){
+ body{padding-left:0!important;padding-top:66px!important}
+ .hub-menu-toggle{display:block;position:fixed;top:12px;left:12px;z-index:1002;border:0;border-radius:9px;background:#101b32;color:#fff;padding:11px 15px;font:700 13px/1.2 inherit;box-shadow:0 5px 18px #101b3230;cursor:pointer}
+ .hub-sidebar{width:min(82vw,285px);transform:translateX(-105%);transition:transform .22s ease;padding-top:65px}
+ .hub-sidebar.is-open{transform:translateX(0)}
+ .hub-sidebar-backdrop{display:block;position:fixed;inset:0;z-index:999;border:0;background:#101b3270;opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s}
+ .hub-sidebar-backdrop.is-open{opacity:1;visibility:visible}
+}
+@media(prefers-reduced-motion:reduce){.hub-sidebar,.hub-sidebar-backdrop{transition:none}}
+
+</style></head><body><button class="hub-menu-toggle" id="hubMenuToggle" type="button" aria-controls="hubSidebar" aria-expanded="false">☰ Menu</button>
+<button class="hub-sidebar-backdrop" id="hubSidebarBackdrop" type="button" aria-label="Close navigation"></button>
+<aside class="hub-sidebar" id="hubSidebar" aria-label="Main navigation">
+<a class="hub-side-brand" href="index.html"><span class="hub-side-mark">O</span><span><strong>ORIKAEZE HUB</strong><small>Powered by Orikaeze Media</small></span></a>
+<nav aria-label="Main navigation"><a href="index.html">Home</a>
+<a href="data.html">Data</a>
+<a href="airtime.html">Airtime</a>
+<a href="cable-tv.html">Cable TV</a>
+<a href="education.html" aria-current="page">Education</a>
+<a href="marketplace.html">Marketplace</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact Us</a></nav>
+<a class="hub-side-account" href="account.html">My Account ↗</a>
+</aside>
 <main><span class="tag">EDUCATION SERVICES</span><h1>Education PINs</h1><p class="intro">Access examination PIN services from one place. Select the examination body you need.</p>
 <div class="notice"><strong>Service setup in progress:</strong> WAEC, NECO and JAMB are listed here for the planned rollout. PIN purchases will be enabled only after the provider API, PIN type, delivery process and pricing have been confirmed and tested. Please do not make a payment for these services yet.</div>
 <section class="grid" aria-label="Education PIN providers">
@@ -63,4 +93,18 @@ footer strong{letter-spacing:.5px;color:var(--hub-green)}
 <article class="card"><div class="icon">N</div><h2>NECO</h2><p>NECO result-checking PIN and supported examination services.</p><span class="badge">COMING SOON</span></article>
 <article class="card"><div class="icon">J</div><h2>JAMB</h2><p>JAMB ePIN and other supported registration services.</p><span class="badge">COMING SOON</span></article>
 </section><a class="back" href="index.html">← Back to dashboard</a></main>
-<footer><strong>ORIKAEZE HUB</strong><p>Powered by Orikaeze Media · IT CAN ONLY GET BETTER!</p></footer></body></html>
+<footer><strong>ORIKAEZE HUB</strong><p>Powered by Orikaeze Media · IT CAN ONLY GET BETTER!</p></footer>
+<script>
+(function(){
+ const menu=document.getElementById('hubMenuToggle');
+ const sidebar=document.getElementById('hubSidebar');
+ const backdrop=document.getElementById('hubSidebarBackdrop');
+ if(!menu||!sidebar||!backdrop)return;
+ function closeMenu(){sidebar.classList.remove('is-open');backdrop.classList.remove('is-open');menu.setAttribute('aria-expanded','false');}
+ menu.addEventListener('click',function(){const open=!sidebar.classList.contains('is-open');sidebar.classList.toggle('is-open',open);backdrop.classList.toggle('is-open',open);menu.setAttribute('aria-expanded',String(open));});
+ backdrop.addEventListener('click',closeMenu);
+ sidebar.querySelectorAll('a').forEach(function(link){link.addEventListener('click',closeMenu);});
+ document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMenu();});
+})();
+</script>
+</body></html>
