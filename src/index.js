@@ -620,9 +620,19 @@ export default {
         return result.meta.changes?reply({success:true,message:"Seller status updated."}):reply({success:false,message:"Seller not found."},404);
       }
       if (url.pathname === "/api/admin/marketplace/products" && request.method === "GET") {
-        const rows=await env.DB.prepare("SELECT p.id,p.title,p.category,p.price_kobo,p.stock_quantity,p.status,p.image_url,p.created_at,s.store_name FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id ORDER BY p.created_at DESC LIMIT 250").all();
+        const rows=await env.DB.prepare("SELECT p.id,p.title,p.description,p.category,p.price_kobo,p.original_price_kobo,p.stock_quantity,p.status,p.image_url,p.created_at,s.store_name FROM marketplace_products p JOIN marketplace_sellers s ON s.id=p.seller_id ORDER BY p.created_at DESC LIMIT 250").all();
         const products=(rows.results||[]).map(p=>({...p,image_url:p.image_url?new URL("/api/marketplace/product-image?id="+encodeURIComponent(p.id),url.origin).toString():""}));
       return reply({success:true,products});
+      }
+      if (url.pathname === "/api/admin/marketplace/product-update" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const id=clean(b.productId),title=clean(b.title),description=clean(b.description),category=clean(b.category);
+        const price=Math.round(Number(b.priceNaira)*100);
+        const originalPrice=clean(b.originalPriceNaira)===""?null:Math.round(Number(b.originalPriceNaira)*100);
+        const stock=Number(b.stock);
+        if(!id||title.length<3||title.length>100||description.length<10||description.length>2500||category.length<2||category.length>50||!Number.isSafeInteger(price)||price<10000||price>100000000||(originalPrice!==null&&(!Number.isSafeInteger(originalPrice)||originalPrice<=price||originalPrice>100000000))||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Check the product details, original price and stock quantity."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_products SET title=?,description=?,category=?,price_kobo=?,original_price_kobo=?,stock_quantity=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(title,description,category,price,originalPrice,stock,id).run();
+        return result.meta.changes?reply({success:true,message:"Product details updated successfully."}):reply({success:false,message:"Product not found or no changes were made."},404);
       }
       if (url.pathname === "/api/admin/marketplace/product-image" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
