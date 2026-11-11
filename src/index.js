@@ -807,6 +807,14 @@ export default {
         const result=await env.DB.prepare("UPDATE marketplace_products SET stock_quantity=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND seller_id=? AND status IN('pending','approved')").bind(stock,id,seller.id).run();
         return result.meta.changes?reply({success:true,message:"Product stock updated."}):reply({success:false,message:"Product not found or no longer editable."},404);
       }
+      if (url.pathname === "/api/marketplace/seller/product-update" && request.method === "POST") {
+        let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
+        const id=clean(b.productId),title=clean(b.title),description=clean(b.description),category=clean(b.category),price=Math.round(Number(b.priceNaira)*100),originalPrice=clean(b.originalPriceNaira)===""?null:Math.round(Number(b.originalPriceNaira)*100),stock=Number(b.stock),image=clean(b.imageUrl);
+        if(!id||title.length<3||title.length>100||description.length<10||description.length>2500||category.length<2||category.length>50||!Number.isSafeInteger(price)||price<10000||price>100000000||(originalPrice!==null&&(!Number.isSafeInteger(originalPrice)||originalPrice<=price||originalPrice>100000000))||!Number.isInteger(stock)||stock<0||stock>100000)return reply({success:false,message:"Check the product details, original price and stock quantity."},400);
+        if(image && (image.length>500000||!/^data:image\\/(?:webp|jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)))return reply({success:false,message:"Choose a valid product photo. Please select it from your phone again."},400);
+        const result=await env.DB.prepare("UPDATE marketplace_products SET title=?,description=?,category=?,price_kobo=?,original_price_kobo=?,stock_quantity=?,image_url=CASE WHEN ?='' THEN image_url ELSE ? END,status=CASE WHEN status IN('approved','rejected') THEN 'pending' ELSE status END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND seller_id=? AND status IN('pending','approved','rejected')").bind(title,description,category,price,originalPrice,stock,image,image,id,seller.id).run();
+        return result.meta.changes?reply({success:true,message:"Product details updated. Changes to an approved or rejected product have been sent for owner approval."}):reply({success:false,message:"Product not found or no longer editable."},404);
+      }
       if (url.pathname === "/api/marketplace/seller/product-archive" && request.method === "POST") {
         let b;try{b=await request.json()}catch{return reply({success:false,message:"Invalid request."},400)}
         const id=clean(b.productId);
